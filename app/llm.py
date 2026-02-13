@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 LLAMA_CPP_BASE_URL = os.environ.get("LLAMA_CPP_BASE_URL", "http://localhost:8000")
 
 MODEL_ALIASES: dict[str, str] = {
-    "fast": "glm-4.7-flash:30b-gpu",
+    "fast": "glm-4.7-flash:30b",
 }
 
 

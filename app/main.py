@@ -15,3 +15,9 @@ async def root():
 async def create_task(body: dict, priority: int = 5):
     task_id = queue.enqueue(body, priority=priority)
     return {"task_id": task_id, "status": "pending"}
+
+
+@app.post("/check_email")
+async def check_email():
+    task_id = queue.enqueue({"type": "check_email"})
+    return {"task_id": task_id, "status": "pending"}

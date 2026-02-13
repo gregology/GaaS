@@ -2,6 +2,7 @@ import logging
 import time
 
 from app import queue
+from app.tasks import check_email, classify_email, collect_email
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,8 +13,20 @@ log = logging.getLogger(__name__)
 POLL_INTERVAL = 1  # seconds
 
 
+HANDLERS = {
+    "check_email": check_email.handle,
+    "collect_email": collect_email.handle,
+    "classify_email": classify_email.handle,
+}
+
+
 def handle(task: dict):
-    log.info("Processing task %s: %s", task["id"], task["payload"])
+    task_type = task["payload"].get("type")
+    handler = HANDLERS.get(task_type)
+    if handler is None:
+        log.warning("Unknown task type: %s", task_type)
+        return
+    handler(task)
 
 
 def main():
