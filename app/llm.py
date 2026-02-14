@@ -15,10 +15,10 @@ load_dotenv()
 
 log = logging.getLogger(__name__)
 
-LLAMA_CPP_BASE_URL = os.environ.get("LLAMA_CPP_BASE_URL", "http://localhost:8000")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:8000")
 
 MODEL_ALIASES: dict[str, str] = {
-    "fast": "glm-4.7-flash:30b",
+    "fast": os.environ.get("FAST_LLM", ""),
 }
 
 
@@ -99,8 +99,8 @@ class LLMBackend(Protocol):
 class LlamaCppBackend:
     def __init__(
         self,
-        base_url: str = LLAMA_CPP_BASE_URL,
-        timeout: float = 1200.0,
+        base_url: str = LLM_BASE_URL,
+        timeout: float = 2400.0,
     ):
         self._base_url = base_url.rstrip("/")
         self._client = httpx.Client(timeout=timeout)
@@ -134,6 +134,8 @@ class LlamaCppBackend:
             f"{self._base_url}/v1/chat/completions",
             json=payload,
         )
+        if not resp.is_success:
+            log.error("LLM error status=%d body=%s", resp.status_code, resp.text)
         resp.raise_for_status()
 
         content = resp.json()["choices"][0]["message"]["content"]
