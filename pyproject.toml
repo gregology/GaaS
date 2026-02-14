@@ -11,4 +11,5 @@ dependencies = [
     "jsonschema>=4.23",
     "python-frontmatter>=1.1.0",
     "pyyaml>=6.0",
+    "fastapi-crons>=0.2",
 ]

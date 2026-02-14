@@ -11,5 +11,16 @@ email:
 queue:
   data_dir: data/queue
 
+schedules:
+  - type: check_email
+    every: 30m
+    options:
+      limit: 50
+  # Advanced: use raw cron expressions
+  # - type: check_email
+  #   cron: "0 3 * * *"
+  #   options:
+  #     limit: 500
+
 storage:
   notes_dir: /path/to/notes

@@ -195,3 +195,6 @@ cython_debug/
 
 # Task queue data
 data/queue/**/*.yaml
+
+# Cron job state
+cron_state.db

@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 
 from app import queue
+from app.scheduler import init_schedules
 
 app = FastAPI()
 queue.init()
+init_schedules(app)
 
 
 @app.get("/")

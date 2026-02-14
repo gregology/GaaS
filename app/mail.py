@@ -31,7 +31,7 @@ class Email:
         self.from_name: str = msg.from_values.name if msg.from_values else ""
         self.to_address: str = msg.to[0] if msg.to else ""
         self.subject: str = msg.subject
-        self.date: datetime = msg.date
+        self.date: datetime = msg.date if msg.date.tzinfo else msg.date.replace(tzinfo=timezone.utc)
 
         self.contents: str = msg.text or msg.html or ""
         self.contents_clean: str = self._clean(msg.text, msg.html)
