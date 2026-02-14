@@ -18,5 +18,8 @@ def handle(task: dict):
     store.save(email)
 
     if all(email.authentication.values()):
-        queue.enqueue({"type": "classify_email", "uid": uid}, priority=7)
+        queue.enqueue({"type": "classify_email", "uid": uid}, priority=6)
         log.info("collect_email: queued classify_email for uid=%s", uid)
+    else:
+        queue.enqueue({"type": "classify_email", "uid": uid}, priority=9)
+        log.info("collect_email: queued low priority classify_email for uid=%s", uid)
