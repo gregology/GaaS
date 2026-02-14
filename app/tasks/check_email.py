@@ -29,4 +29,4 @@ def handle(task: dict):
     log.info("check_email: %d new emails: %s", len(new), new)
 
     for uid in new:
-        queue.enqueue({"type": "collect_email", "uid": uid})
+        queue.enqueue({"type": "collect_email", "uid": uid}, priority=3)

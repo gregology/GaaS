@@ -37,9 +37,11 @@ class Email:
         self.contents_clean: str = self._clean(msg.text, msg.html)
 
         spf, dkim, dmarc = _parse_auth_results(msg.headers)
-        self.spf_pass: bool = spf
-        self.dkim_pass: bool = dkim
-        self.dmarc_pass: bool = dmarc
+        self.authentication: dict = {
+            "dkim_pass": dkim,
+            "dmarc_pass": dmarc,
+            "spf_pass": spf,
+        }
 
         self._unsubscribe_url: str | None = _parse_unsubscribe_url(msg.headers)
         self._unsubscribe_post: bool = bool(msg.headers.get("list-unsubscribe-post", ()))

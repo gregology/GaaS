@@ -56,9 +56,7 @@ class EmailStore:
             to_address=email.to_address,
             subject=email.subject,
             recieved_at=email.date.isoformat(),
-            dkim_pass=email.dkim_pass,
-            dmarc_pass=email.dmarc_pass,
-            spf_pass=email.spf_pass,
+            authentication=email.authentication,
         )
         filepath.write_text(frontmatter.dumps(post))
         log.info("Saved email uid=%s to %s", email._uid, filepath)

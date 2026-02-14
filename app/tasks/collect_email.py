@@ -17,6 +17,6 @@ def handle(task: dict):
     store = EmailStore()
     store.save(email)
 
-    if email.dkim_pass and email.dmarc_pass and email.spf_pass:
-        queue.enqueue({"type": "classify_email", "uid": uid})
+    if all(email.authentication.values()):
+        queue.enqueue({"type": "classify_email", "uid": uid}, priority=7)
         log.info("collect_email: queued classify_email for uid=%s", uid)
