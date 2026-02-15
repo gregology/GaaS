@@ -26,12 +26,12 @@ CLASSIFY_SCHEMA = {
 }
 
 
-def _render_prompt(email_contents_clean: str) -> str:
+def _render_prompt(email: str) -> str:
     template = jinja_env.get_template("classify_email.jinja")
     return template.render(
         beginning_salt=secrets.token_hex(16),
         end_salt=secrets.token_hex(16),
-        email_contents_clean=email_contents_clean,
+        email=email,
     )
 
 
@@ -42,7 +42,8 @@ def handle(task: dict):
     with Mailbox() as mb:
         email = mb.get_email(uid)
 
-    prompt = _render_prompt(email.contents_clean)
+    prompt = _render_prompt(email)
+    log.info(f"classify_email_prompt:\n{prompt}")
     conversation = LLMConversation(
         model="fast",
         system="Disable internal monologue. Answer directly. Respond with JSON."

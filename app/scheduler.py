@@ -53,7 +53,7 @@ def init_schedules(app: FastAPI) -> Crons:
     crons = Crons(app)
 
     for i, schedule in enumerate(schedules):
-        task_type = schedule["type"]
+        task_type = schedule["task"]
         expr = _resolve_expr(schedule)
         options = schedule.get("options", {})
         name = f"{task_type}_{i}"

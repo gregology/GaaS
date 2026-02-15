@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.policy import EmailPolicy
+from email.utils import parsedate_to_datetime
 
 import httpx
 from bs4 import BeautifulSoup
@@ -31,7 +32,9 @@ class Email:
         self.from_name: str = msg.from_values.name if msg.from_values else ""
         self.to_address: str = msg.to[0] if msg.to else ""
         self.subject: str = msg.subject
-        self.date: datetime = msg.date if msg.date.tzinfo else msg.date.replace(tzinfo=timezone.utc)
+        self.date: datetime = _parse_received_date(msg.headers) or (
+            msg.date if msg.date.tzinfo else msg.date.replace(tzinfo=timezone.utc)
+        )
 
         self.contents: str = msg.text or msg.html or ""
         self.contents_clean: str = self._clean(msg.text, msg.html)
@@ -195,6 +198,23 @@ def _parse_unsubscribe_url(headers: dict) -> str | None:
     value = " ".join(raw)
     urls = re.findall(r"<(https?://[^>]+)>", value)
     return urls[0] if urls else None
+
+
+def _parse_received_date(headers: dict) -> datetime | None:
+    received = headers.get("received", ())
+    if not received:
+        return None
+    first_hop = received[0]
+    _, _, date_str = first_hop.rpartition(";")
+    date_str = date_str.strip()
+    if not date_str:
+        return None
+    try:
+        dt = parsedate_to_datetime(date_str)
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        log.warning("Failed to parse Received header date: %s", date_str)
+        return None
 
 
 def _parse_auth_results(headers: dict) -> tuple[bool, bool, bool]:

@@ -12,7 +12,7 @@ queue:
   data_dir: queue
 
 schedules:
-  - type: check_email
+  - task: check_email
     every: 30m
     options:
       limit: 50
