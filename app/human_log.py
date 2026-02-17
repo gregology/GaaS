@@ -8,6 +8,11 @@ from app.config import config
 
 _log_dir: Path = Path(config.directories.logs)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+
 HUMAN = 25  # between INFO (20) and WARNING (30)
 logging.addLevelName(HUMAN, "HUMAN")
 

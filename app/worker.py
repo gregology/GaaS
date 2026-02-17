@@ -5,10 +5,6 @@ import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
 from app.integrations import HANDLERS
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
 log = logging.getLogger(__name__)
 
 POLL_INTERVAL = 1  # seconds
