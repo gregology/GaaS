@@ -54,6 +54,10 @@ Asking an LLM to do a programmable task is the robot equivalent of _this meeting
 
 Patterns should not rely on trusting a non deterministic machine, no matter how much it glazzes you.
 
+### Optimize for memory
+
+Memory is most valuable for inference. The disk based queueing system was added for human readability _and_ to reduce memory usage.
+
 
 ## Setup
 
