@@ -3,24 +3,14 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from app.config import config
 from app.store import NoteStore
 
 log = logging.getLogger(__name__)
 
 
-def _pr_dir() -> Path:
-    if config.directories.notes is None:
-        raise RuntimeError(
-            "Notes directory is not configured. "
-            "Set 'directories.notes' in config.yaml."
-        )
-    return config.directories.notes / "github" / "pull_requests"
-
-
 class PullRequestStore:
-    def __init__(self, path: Path | None = None) -> None:
-        self._store = NoteStore(path or _pr_dir())
+    def __init__(self, path: Path) -> None:
+        self._store = NoteStore(path)
 
     @staticmethod
     def _filename(org: str, repo: str, number: int) -> str:

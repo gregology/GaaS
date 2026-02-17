@@ -6,8 +6,8 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.config import config
 from app.llm import LLMConversation
-from app.mail import Mailbox
-from app.store import EmailStore
+from .mail import Mailbox
+from .store import EmailStore
 
 log = logging.getLogger(__name__)
 

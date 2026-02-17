@@ -2,8 +2,8 @@ import logging
 
 from app import queue
 from app.config import config
-from app.mail import Mailbox
-from app.store import EmailStore
+from .mail import Mailbox
+from .store import EmailStore
 
 log = logging.getLogger(__name__)
 

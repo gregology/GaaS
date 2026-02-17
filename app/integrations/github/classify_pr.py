@@ -7,8 +7,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from app.config import config
-from app.github import GitHubClient
-from app.github_store import PullRequestStore
+from .client import GitHubClient
+from .store import PullRequestStore
 from app.llm import LLMConversation
 
 log = logging.getLogger(__name__)
@@ -68,5 +68,6 @@ def handle(task: dict):
 
     log.info("github.classify_pr: %s/%s#%d result=%s", org, repo, number, classification)
 
-    store = PullRequestStore()
+    pr_path = config.directories.notes / "github" / "pull_requests"
+    store = PullRequestStore(path=pr_path)
     store.update(org, repo, number, classification=classification)

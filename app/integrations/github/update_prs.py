@@ -3,17 +3,22 @@ from __future__ import annotations
 import logging
 
 from app import queue
-from app.github import GitHubClient
-from app.github_store import PullRequestStore
+from app.config import config
+from .client import GitHubClient
+from .store import PullRequestStore
 
 log = logging.getLogger(__name__)
+
+
+def _pr_path():
+    return config.directories.notes / "github" / "pull_requests"
 
 
 def handle(task: dict):
     integration_name = task["payload"]["integration"]
     log.info("github.update_prs: starting (integration=%s)", integration_name)
     client = GitHubClient()
-    store = PullRequestStore()
+    store = PullRequestStore(path=_pr_path())
 
     _refresh_existing(store, client)
     _discover_new(store, client)
