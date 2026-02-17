@@ -2,6 +2,7 @@ import argparse
 import logging
 import time
 
+import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
 from app.config import config
 from app.tasks import (

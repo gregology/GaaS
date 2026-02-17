@@ -67,7 +67,8 @@ class Email:
     def archive(self) -> None:
         folder = self._mailbox._folder("\\Archive")
         self._mailbox._move(self._uid, folder)
-        log.info("Archived email uid=%s subject=%s", self._uid, self.subject)
+        subject = self.subject[:25] + "…" if len(self.subject) > 25 else self.subject
+        log.human("Archived email from **%s** — `%s` (uid %s)", self.from_address, subject, self._uid)
 
     def spam(self) -> None:
         folder = self._mailbox._folder("\\Junk")

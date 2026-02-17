@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
 from app.scheduler import init_schedules
 
