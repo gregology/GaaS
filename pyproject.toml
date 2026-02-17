@@ -1,0 +1,15 @@
+[project]
+name = "gaas"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "fastapi[standard]>=0.129.0",
+    "imap-tools>=1.7",
+    "jinja2>=3.1.6",
+    "jsonschema>=4.23",
+    "python-frontmatter>=1.1.0",
+    "pyyaml>=6.0",
+    "fastapi-crons>=0.2",
+]
