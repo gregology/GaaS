@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi_crons import Crons
 
 from app import queue
-from app.config import cfg
+from app.config import config
 
 log = logging.getLogger(__name__)
 
@@ -36,16 +36,16 @@ def interval_to_cron(interval: str) -> str:
     raise ValueError(f"Unknown unit: {unit}")
 
 
-def _resolve_expr(schedule: dict) -> str:
-    if "cron" in schedule:
-        return schedule["cron"]
-    if "every" in schedule:
-        return interval_to_cron(schedule["every"])
-    raise ValueError(f"Schedule must have 'cron' or 'every' key: {schedule}")
+def _resolve_expr(schedule) -> str:
+    if schedule.cron:
+        return schedule.cron
+    if schedule.every:
+        return interval_to_cron(schedule.every)
+    raise ValueError(f"Schedule must have 'cron' or 'every': {schedule}")
 
 
 def init_schedules(app: FastAPI) -> Crons:
-    schedules = cfg("schedules", [])
+    schedules = config.schedules
     if not schedules:
         log.info("No schedules configured")
         return Crons(app)
@@ -53,9 +53,9 @@ def init_schedules(app: FastAPI) -> Crons:
     crons = Crons(app)
 
     for i, schedule in enumerate(schedules):
-        task_type = schedule["task"]
+        task_type = schedule.task
         expr = _resolve_expr(schedule)
-        options = schedule.get("options", {})
+        options = schedule.options
         name = f"{task_type}_{i}"
 
         def make_job(t=task_type, o=options):

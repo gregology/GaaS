@@ -45,7 +45,6 @@ def handle(task: dict):
     prompt = _render_prompt(email)
     log.info("classify_email_prompt:\n%s", prompt)
     conversation = LLMConversation(
-        model="fast",
         system="Disable internal monologue. Answer directly. Respond with JSON."
     )
     classification = conversation.message(prompt=prompt, schema=CLASSIFY_SCHEMA)

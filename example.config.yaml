@@ -1,0 +1,37 @@
+llms:
+  default:
+    base_url: http://localhost:11434          # Ollama server URL
+    model: your-model-name:latest
+  fast:
+    base_url: http://gaming_rig:11434
+    model: your-model-name:latest
+  # Example: external provider with API key
+  # external:
+  #   base_url: https://api.openai.com
+  #   token: !secret openai_api_key
+  #   model: gpt-5-mini-2025-08-07
+
+# Optional: remove this section entirely if you don't use email features
+email:
+  imap_server: imap.example.com
+  imap_port: 993
+  username: you@example.com
+  password: !secret email_password
+
+directories:
+  notes: /path/to/notes
+  task_queue: /path/to/task_queue
+  logs: /path/to/logs
+
+schedules:
+  - task: check_email
+    every: 30m
+    options:
+      limit: 50
+  - task: update_github_prs
+    every: 30m
+  # Advanced: use raw cron expressions
+  # - task: check_email
+  #   cron: "0 3 * * *"
+  #   options:
+  #     limit: 500

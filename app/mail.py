@@ -11,14 +11,9 @@ import httpx
 from bs4 import BeautifulSoup
 from imap_tools import AND, MailBox as IMAPToolsMailBox, MailMessage
 
-from app.config import cfg
+from app.config import config
 
 log = logging.getLogger(__name__)
-
-IMAP_SERVER = cfg("email.imap_server", "")
-IMAP_PORT = cfg("email.imap_port", 993)
-IMAP_USERNAME = cfg("email.username", "")
-IMAP_PASSWORD = cfg("email.password", "")
 
 
 class Email:
@@ -119,10 +114,14 @@ class Mailbox:
 
     def _ensure_connected(self) -> None:
         if self._conn is None:
-            self._conn = IMAPToolsMailBox(IMAP_SERVER, IMAP_PORT)
-            self._conn.login(IMAP_USERNAME, IMAP_PASSWORD)
+            if config.email is None:
+                raise RuntimeError(
+                    "Email is not configured. Add an 'email' section to config.yaml."
+                )
+            self._conn = IMAPToolsMailBox(config.email.imap_server, config.email.imap_port)
+            self._conn.login(config.email.username, config.email.password)
             self._folders = _discover_folders(self._conn)
-            log.info("IMAP connected to %s as %s", IMAP_SERVER, IMAP_USERNAME)
+            log.info("IMAP connected to %s as %s", config.email.imap_server, config.email.username)
             log.info("Discovered folders: %s", self._folders)
 
     def collect_emails(self, limit: int = 50) -> None:

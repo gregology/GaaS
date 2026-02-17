@@ -3,7 +3,7 @@ import logging
 import time
 
 from app import queue
-from app.config import set_override
+from app.config import config
 from app.tasks import (
     check_email, classify_email, classify_github_pr, collect_email, update_github_prs,
 )
@@ -37,11 +37,11 @@ def handle(task: dict):
 
 def main():
     parser = argparse.ArgumentParser(description="GaaS task worker")
-    parser.add_argument("--llm_base_url", help="Override the LLM base URL from config.yml")
+    parser.add_argument("--llm_base_url", help="Override the default LLM base URL from config.yaml")
     args = parser.parse_args()
 
-    if args.llm_base_url:
-        set_override("llm.base_url", args.llm_base_url)
+    if args.llm_base_url and "default" in config.llms:
+        config.llms["default"].base_url = args.llm_base_url
 
     queue.init()
     log.info("Worker started, polling every %ss", POLL_INTERVAL)

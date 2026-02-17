@@ -58,7 +58,6 @@ def handle(task: dict):
     log.info("classify_github_pr_prompt:\n%s", prompt)
 
     conversation = LLMConversation(
-        model="fast",
         system="Disable internal monologue. Answer directly. Respond with JSON.",
     )
     classification = conversation.message(prompt=prompt, schema=CLASSIFY_SCHEMA)

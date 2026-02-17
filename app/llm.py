@@ -9,14 +9,9 @@ import httpx
 import jsonschema
 from pydantic import BaseModel, Field
 
-from app.config import cfg
+from app.config import config
 
 log = logging.getLogger(__name__)
-
-MODEL_ALIASES: dict[str, str] = {
-    "fast": cfg("llm.fast_model", ""),
-}
-
 
 
 class Role(StrEnum):
@@ -96,10 +91,14 @@ class LlamaCppBackend:
     def __init__(
         self,
         base_url: str | None = None,
+        token: str | None = None,
         timeout: float = 2400.0,
     ):
-        self._base_url = (base_url or cfg("llm.base_url", "http://localhost:8000")).rstrip("/")
-        self._client = httpx.Client(timeout=timeout)
+        self._base_url = (base_url or "http://localhost:11434").rstrip("/")
+        headers: dict[str, str] = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        self._client = httpx.Client(timeout=timeout, headers=headers)
 
     def chat(
         self,
@@ -108,10 +107,8 @@ class LlamaCppBackend:
         temperature: float,
         response_format: dict | None = None,
     ) -> str:
-        resolved = MODEL_ALIASES.get(model, model)
-
         payload: dict[str, Any] = {
-            "model": resolved,
+            "model": model,
             "messages": messages,
             "temperature": temperature,
         }
@@ -120,7 +117,7 @@ class LlamaCppBackend:
 
         log.info(
             "LLM request model=%s messages=%d temperature=%.2f schema=%s",
-            resolved,
+            model,
             len(messages),
             temperature,
             response_format is not None,
@@ -149,16 +146,25 @@ class SchemaValidationError(Exception):
 class LLMConversation:
     def __init__(
         self,
-        model: str = "fast",
+        model: str = "default",
         temperature: float = 0.7,
         system: str | None = None,
         backend: LLMBackend | None = None,
         retry: RetryConfig | None = None,
     ):
-        self.model = model
+        llm_config = config.llms.get(model)
+        if llm_config is None:
+            raise ValueError(
+                f"Unknown LLM profile '{model}'. "
+                f"Available: {list(config.llms.keys())}"
+            )
+        self.model = llm_config.model
         self.temperature = temperature
         self.messages = MessageList()
-        self._backend = backend or LlamaCppBackend()
+        self._backend = backend or LlamaCppBackend(
+            base_url=llm_config.base_url,
+            token=llm_config.token,
+        )
         self._retry = retry or RetryConfig()
 
         if system is not None:
