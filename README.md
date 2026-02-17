@@ -52,7 +52,7 @@ Asking an LLM to do a programmable task is the robot equivalent of _this meeting
 
 ### Zero trust
 
-Patterns should not rely on trusting a non deterministic machine, no matter how much it glazzes you.
+Patterns should not rely on trusting a non deterministic machine, no matter how much it glazes you.
 
 ### Optimize for memory
 
