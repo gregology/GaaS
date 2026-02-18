@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _PROJECT_ROOT / "config.yaml"
@@ -50,6 +50,20 @@ class ScheduleConfig(BaseModel):
     cron: str | None = None
 
 
+class ClassificationConfig(BaseModel):
+    prompt: str
+    type: Literal["confidence", "boolean", "enum"] = "confidence"
+    values: list[str] | None = None
+
+    @model_validator(mode="after")
+    def _check_values(self) -> ClassificationConfig:
+        if self.type == "enum" and not self.values:
+            raise ValueError("'values' is required when type is 'enum'")
+        if self.type != "enum" and self.values is not None:
+            raise ValueError("'values' is only valid when type is 'enum'")
+        return self
+
+
 class EmailIntegration(BaseModel):
     type: Literal["email"] = "email"
     name: str
@@ -60,6 +74,24 @@ class EmailIntegration(BaseModel):
     schedule: ScheduleConfig | None = None
     llm: str = "default"
     limit: int = 50
+    classifications: dict[str, ClassificationConfig] = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_classifications(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        raw = data.get("classifications")
+        if not raw or not isinstance(raw, dict):
+            return data
+        normalized = {}
+        for key, value in raw.items():
+            if isinstance(value, str):
+                normalized[key] = {"prompt": value}
+            else:
+                normalized[key] = value
+        data["classifications"] = normalized
+        return data
 
 
 class GitHubIntegration(BaseModel):
