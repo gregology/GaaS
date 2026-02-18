@@ -43,8 +43,8 @@ What would Home Assistant Do? Home Assistant has battle hardened patterns for co
 
 ### Human readable
 
-Every "decision" should leave a human readable audit trail.
-Note: I put "decision" in quotation marks because LLMs do not make decisions, they make next token probability calculations.
+Every "decision" should leave a human readable audit trail.  
+Note: I put "decision" in quotation marks because LLMs do not make decisions, they make next token predictions.
 
 ### Default to code
 
@@ -57,6 +57,38 @@ Patterns should not rely on trusting a non deterministic machine, no matter how 
 ### Optimize for memory
 
 Memory is most valuable for inference. The disk based queueing system was added for human readability _and_ to reduce memory usage.
+
+### Testing philosophy
+
+Tests exist to enforce the Principle of Reversibility. The purpose of the test suite is not to reduce bugs generally, it is to guarantee that automated actions cannot cause irreversible harm.
+
+Test rigor should be proportional to how irreversible an action is, not how complex the code is. A one line HTTP POST that unsubscribes from a mailing list deserves more test rigor than 100 lines of email parsing, because the parsing can never leak data or trigger an irreversible action. Every action in the system should be categorized by reversibility tier:
+
+- **Read only** (no side effects): checking a mailbox, classifying content, reading local files. Standard unit tests.
+- **Soft reversible** (easily undone): archiving a message, creating a draft. Filesystem snapshot assertions.
+- **Hard reversible** (technically undoable but with side effects): marking as spam may train server side filters. Shadow and dry run verification.
+- **Irreversible** (cannot be undone): unsubscribing from a list, sending data to an external service. Property based safety invariants and mandatory dry run.
+
+As new integrations and actions are added, each one should be placed into a tier before any tests are written. The tier determines the testing strategy, not the complexity of the implementation.
+
+**Test the decision boundary, not the LLM.** The LLM is non deterministic by nature so asserting on its output is meaningless. But the automation dispatch logic that evaluates classification results and decides which actions to fire is entirely deterministic. This is where a bug becomes an irreversible action.
+
+Use property based testing to verify that for all possible classification outputs, no unknown action is ever produced and no unsafe combination of actions can occur. For example, archiving a message and drafting a reply to it should never happen in the same automation run.
+
+Prompt injection testing follows the same principle. Untrusted content (email bodies, PR descriptions, any external input) is fed directly into LLM prompts. Rather than trying to assert that the LLM successfully ignored an injection attempt, feed adversarial inputs through the full pipeline and assert on the actions produced. The prompt level defenses like random salts are the first barrier. The deterministic dispatch rules are the second. Tests should verify that even if the first barrier fails completely, the second barrier still prevents irreversible actions.
+
+**Assert on filesystem state as an atomic value.** The filesystem is the database. The task queue moves YAML files between directories, integrations store markdown files with frontmatter, and logs append to daily files. Asserting on individual files misses emergent problems like orphaned tasks, files stuck in an intermediate state after a crash, or duplicate entries across directories.
+
+Instead, snapshot the entire directory tree and assert on it as a single comparable value. After a full task lifecycle of `enqueue -> dequeue -> complete`, the invariant is: pending is empty, active is empty, done has exactly one file, and the total task count is conserved. No task should ever exist in two directories at once. No task should disappear without being accounted for. These structural assertions catch a class of bugs that per file checks will miss, particularly around crash recovery and concurrent access.
+
+**Safety invariants must hold under chaos.** The dangerous failure mode is not the LLM being unavailable. Retry logic handles that. The dangerous failure is the LLM being confidently wrong. A model that classifies a phishing email as high confidence and requiring a response would trigger a draft reply to a malicious sender.
+
+Chaos testing should inject faults at the classification level: flip boolean values, max out all confidence scores to 1.0, swap enum values to their most dangerous option. Then assert that safety boundaries still hold. For any possible classification output, the system should enforce bounded blast radius. No single automation run should trigger more than a configurable number of irreversible actions. These invariants should be expressed as properties that hold for all inputs using property based testing, not as example assertions against specific test fixtures. A property test that says "for all possible classifications, the blast radius is bounded" is a fundamentally stronger guarantee than an example test that says "for this one test email, archive was produced."
+
+
+## TODO
+
+- [ ] Add startup config validation that rejects automations which trigger irreversible actions (e.g. `unsubscribe`) without high confidence gating. The config is gitignored so this belongs at startup, not in the test suite. Include an explicit override flag for yolo users.
 
 
 ## Setup
