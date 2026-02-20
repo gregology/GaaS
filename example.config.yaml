@@ -99,6 +99,19 @@ integrations:
     schedule:
       every: 30m
     llm: default
+    # orgs: [myorg, anotherorg]       # Restrict to specific GitHub organizations
+    # repos: [myorg/myrepo]           # Restrict to specific repositories (org/repo)
+    # include_mentions: true          # Also track PRs that mention you (noisy, off by default)
+    classifications:                  # Optional — defaults are used if omitted
+      complexity: how complex is this PR to review? 0 = trivial typo fix, 1 = major architectural change
+      risk: how risky is this change? 0 = no risk, 1 = high risk of breaking things
+      documentation_only:
+        prompt: is this primarily a documentation or configuration change?
+        type: boolean
+    # automations:                    # Phase 4 — actions will be defined here
+    #   - when:
+    #       classification.risk: "> 0.8"
+    #     then: []
 
   # Advanced: nightly deep scan with a thorough model
   # - type: email

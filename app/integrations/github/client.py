@@ -51,14 +51,57 @@ class GitHubClient:
             raise RuntimeError(f"gh api failed (exit {proc.returncode}): {proc.stderr.strip()}")
         return proc.stdout
 
-    def assigned_prs(self) -> list[dict]:
+    def active_prs(self, integration) -> list[dict]:
+        """Fetch all open PRs currently requiring the user's attention.
+
+        Queries GitHub for PRs where the user is an assignee, requested reviewer,
+        or author (non-draft). Optionally includes PRs that mention the user.
+        Results are filtered to the configured orgs/repos and deduplicated
+        across query types.
+        """
+        seen: set[tuple[str, str, int]] = set()
+        results: list[dict] = []
+
+        base_queries = [
+            "is:pr is:open assignee:@me",
+            "is:pr is:open review-requested:@me",
+            "is:pr is:open author:@me draft:false",
+        ]
+        if integration.include_mentions:
+            base_queries.append("is:pr is:open mentions:@me")
+
+        scopes = self._scope_qualifiers(integration)
+        for base_query in base_queries:
+            for scope in scopes:
+                query = f"{base_query} {scope}".strip()
+                for item in self._search_prs(query):
+                    key = (item["org"], item["repo"], item["number"])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(item)
+
+        log.info("active_prs: found %d unique PRs across all queries", len(results))
+        return results
+
+    def _scope_qualifiers(self, integration) -> list[str]:
+        """Build scope qualifiers from the integration's org/repo config.
+
+        Returns a list of qualifier strings to append to each search query
+        (e.g. ["org:myorg", "repo:other/repo"]). Returns [""] — one empty
+        qualifier — when no orgs or repos are configured, meaning no filter.
+        """
+        qualifiers = []
+        for org in (integration.orgs or []):
+            qualifiers.append(f"org:{org}")
+        for repo in (integration.repos or []):
+            qualifiers.append(f"repo:{repo}")
+        return qualifiers or [""]
+
+    def _search_prs(self, query: str) -> list[dict]:
+        """Execute a GitHub search/issues query and return parsed PR dicts."""
         result = self._gh_api(
             "search/issues",
-            method="GET",
-            params={
-                "q": "is:pr is:open review-requested:@me",
-                "per_page": "100",
-            },
+            params={"q": query, "per_page": "100"},
         )
         prs = []
         for item in result.get("items", []):
@@ -74,7 +117,7 @@ class GitHubClient:
                 "title": item["title"],
                 "author": item.get("user", {}).get("login", ""),
             })
-        log.info("assigned_prs: found %d PRs", len(prs))
+        log.info("_search_prs(%r): found %d PRs", query, len(prs))
         return prs
 
     def _gh_api(self, endpoint: str, method: str = "GET", params: dict | None = None) -> dict:

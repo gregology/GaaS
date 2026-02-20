@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import logging
 import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
+import frontmatter
 from jinja2 import Environment, FileSystemLoader
 
-from app.config import config
+from app import queue
+from app.config import ClassificationConfig, config
+from app.integrations.github.const import DEFAULT_CLASSIFICATIONS
+from app.llm import LLMConversation
 from .client import GitHubClient
 from .store import PullRequestStore
-from app.llm import LLMConversation
 
 log = logging.getLogger(__name__)
 
@@ -18,17 +22,28 @@ jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 MAX_DIFF_CHARS = 10_000
 
-CLASSIFY_SCHEMA = {
-    "properties": {
-        "complexity": {"type": "number"},
-        "risk": {"type": "number"},
-        "documentation_only": {"type": "number"},
-    },
-    "required": ["complexity", "risk", "documentation_only"],
+_TYPE_TO_SCHEMA = {
+    "confidence": lambda _cls: {"type": "number"},
+    "boolean": lambda _cls: {"type": "boolean"},
+    "enum": lambda cls: {"type": "string", "enum": cls.values},
 }
 
 
-def _render_prompt(detail: dict, diff: str) -> str:
+def _build_schema(classifications: dict[str, ClassificationConfig]) -> dict:
+    properties = {}
+    for name, cls in classifications.items():
+        properties[name] = _TYPE_TO_SCHEMA[cls.type](cls)
+    return {
+        "properties": properties,
+        "required": list(classifications.keys()),
+    }
+
+
+def _render_prompt(
+    detail: dict,
+    diff: str,
+    classifications: dict[str, ClassificationConfig],
+) -> str:
     if len(diff) > MAX_DIFF_CHARS:
         diff = diff[:MAX_DIFF_CHARS] + "\n... (diff truncated)"
     template = jinja_env.get_template("classify_github_pr.jinja")
@@ -42,6 +57,7 @@ def _render_prompt(detail: dict, diff: str) -> str:
         deletions=detail["deletions"],
         changed_files=detail["changed_files"],
         diff=diff,
+        classifications=classifications,
     )
 
 
@@ -53,21 +69,55 @@ def handle(task: dict):
     number = task["payload"]["number"]
     log.info("github.classify_pr: %s/%s#%d (integration=%s)", org, repo, number, integration_name)
 
-    client = GitHubClient()
-    detail = client.get_pr_detail(org, repo, number)
-    diff = client.get_pr_diff(org, repo, number)
+    classifications = integration.classifications or DEFAULT_CLASSIFICATIONS
+    llm_config = config.llms[integration.llm]
 
-    prompt = _render_prompt(detail, diff)
-    log.info("github.classify_pr prompt:\n%s", prompt)
-
-    conversation = LLMConversation(
-        model=integration.llm,
-        system="Disable internal monologue. Answer directly. Respond with JSON.",
+    store = PullRequestStore(
+        path=config.directories.notes / "github" / "pull_requests" / integration.name
     )
-    classification = conversation.message(prompt=prompt, schema=CLASSIFY_SCHEMA)
 
-    log.info("github.classify_pr: %s/%s#%d result=%s", org, repo, number, classification)
+    # Check if all classifications are already present — skip LLM if so.
+    note_path = store.find(org, repo, number)
+    existing_cls = {}
+    if note_path:
+        post = frontmatter.load(note_path)
+        existing_cls = post.metadata.get("classification", {})
 
-    pr_path = config.directories.notes / "github" / "pull_requests"
-    store = PullRequestStore(path=pr_path)
-    store.update(org, repo, number, classification=classification)
+    if all(k in existing_cls for k in classifications):
+        log.info(
+            "github.classify_pr: %s/%s#%d all classifications present, skipping LLM",
+            org, repo, number,
+        )
+    else:
+        client = GitHubClient()
+        detail = client.get_pr_detail(org, repo, number)
+        diff = client.get_pr_diff(org, repo, number)
+
+        prompt = _render_prompt(detail, diff, classifications)
+        log.info("github.classify_pr prompt:\n%s", prompt)
+
+        conversation = LLMConversation(
+            model=integration.llm,
+            system="Disable internal monologue. Answer directly. Respond with JSON.",
+        )
+        schema = _build_schema(classifications)
+        classification = conversation.message(prompt=prompt, schema=schema)
+
+        log.info("github.classify_pr: %s/%s#%d result=%s", org, repo, number, classification)
+
+        classified_by = {
+            "model": llm_config.model,
+            "profile": integration.llm,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        store.update(org, repo, number, classification=classification, classified_by=classified_by)
+        log.human("Classified PR **%s/%s#%d**", org, repo, number)
+
+    queue.enqueue({
+        "type": "github.evaluate",
+        "integration": integration_name,
+        "org": org,
+        "repo": repo,
+        "number": number,
+    }, priority=7)
+    log.info("github.classify_pr: queued github.evaluate for %s/%s#%d", org, repo, number)

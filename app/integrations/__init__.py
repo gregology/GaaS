@@ -5,7 +5,7 @@ HANDLERS: dict[str, callable] = {}
 
 ENTRY_TASKS: dict[str, str] = {
     "email": "email.check",
-    "github": "github.update_prs",
+    "github": "github.check",
 }
 
 
