@@ -9,9 +9,17 @@ from email.utils import parsedate_to_datetime
 
 import httpx
 from bs4 import BeautifulSoup
+from icalendar import Calendar
 from imap_tools import AND, MailBox as IMAPToolsMailBox, MailMessage
 
 log = logging.getLogger(__name__)
+
+_NOREPLY_RE = re.compile(
+    r"^(no-?reply|do-?not-?reply|mailer-daemon|postmaster)@",
+    re.IGNORECASE,
+)
+
+_FORWARD_RE = re.compile(r"^\s*(fwd?:|fw:|\[fwd?:)", re.IGNORECASE)
 
 
 class Email:
@@ -39,8 +47,51 @@ class Email:
             "spf_pass": spf,
         }
 
+        self.calendar: dict | None = _parse_calendar(msg.attachments)
+        self.has_attachments: bool = _has_non_calendar_attachments(msg.attachments)
+
+        self._flags: frozenset[str] = frozenset(msg.flags)
+        self._in_reply_to: str = _clean_header(msg.headers.get("in-reply-to", ("",))[0])
+
         self._unsubscribe_url: str | None = _parse_unsubscribe_url(msg.headers)
         self._unsubscribe_post: bool = bool(msg.headers.get("list-unsubscribe-post", ()))
+
+    @property
+    def domain(self) -> str:
+        _, _, d = self.from_address.partition("@")
+        return d.lower()
+
+    @property
+    def is_noreply(self) -> bool:
+        return bool(_NOREPLY_RE.match(self.from_address))
+
+    @property
+    def is_calendar_event(self) -> bool:
+        return self.calendar is not None
+
+    @property
+    def is_reply(self) -> bool:
+        return bool(self._in_reply_to)
+
+    @property
+    def is_forward(self) -> bool:
+        return bool(_FORWARD_RE.match(self.subject))
+
+    @property
+    def is_read(self) -> bool:
+        return "\\Seen" in self._flags
+
+    @property
+    def is_starred(self) -> bool:
+        return "\\Flagged" in self._flags
+
+    @property
+    def is_answered(self) -> bool:
+        return "\\Answered" in self._flags
+
+    @property
+    def is_unsubscribable(self) -> bool:
+        return self.unsubscribe_option
 
     @property
     def unsubscribe_option(self) -> bool:
@@ -72,6 +123,15 @@ class Email:
         folder = self._mailbox._folder("\\Junk")
         self._mailbox._move(self._uid, folder)
         log.info("Marked as spam uid=%s subject=%s", self._uid, self.subject)
+
+    def trash(self) -> None:
+        folder = self._mailbox._folder("\\Trash")
+        self._mailbox._move(self._uid, folder)
+        log.info("Trashed email uid=%s subject=%s", self._uid, self.subject)
+
+    def move_to(self, folder: str) -> None:
+        self._mailbox._move(self._uid, folder)
+        log.info("Moved email uid=%s to folder=%r subject=%s", self._uid, folder, self.subject)
 
     def draft_reply(self, contents: str) -> None:
         subject = _clean_header(self.subject)
@@ -128,6 +188,22 @@ class Mailbox:
             self._folders = _discover_folders(self._conn)
             log.info("IMAP connected to %s as %s", self._imap_server, self._username)
             log.info("Discovered folders: %s", self._folders)
+
+    def inbox_message_ids(self, limit: int = 500) -> list[tuple[str, str]]:
+        """Fetch (uid, message_id) pairs from the inbox using headers-only fetch.
+
+        Returns a list of (uid, raw_message_id) tuples. message_id may be an
+        empty string for malformed emails that lack a Message-ID header.
+        """
+        self._ensure_connected()
+        assert self._conn is not None
+        messages = list(self._conn.fetch(headers_only=True, limit=limit, reverse=False))
+        result = []
+        for msg in messages:
+            uid = msg.uid or ""
+            mid = _clean_header(msg.headers.get("message-id", ("",))[0])
+            result.append((uid, mid))
+        return result
 
     def collect_emails(self, limit: int = 50) -> None:
         self._ensure_connected()
@@ -219,6 +295,66 @@ def _parse_received_date(headers: dict) -> datetime | None:
     except Exception:
         log.warning("Failed to parse Received header date: %s", date_str)
         return None
+
+
+def _parse_calendar(attachments) -> dict | None:
+    """Extract calendar event data from email attachments.
+
+    Returns a dict with:
+      start, end    — ISO strings (or None)
+      guest_count   — number of attendees
+      method        — iTIP method lowercased: "request", "cancel", "reply", etc.
+      is_update     — True when method=request and SEQUENCE > 0
+      partstat      — reply status lowercased for METHOD:REPLY emails:
+                      "accepted", "declined", "tentative", or None
+
+    Returns None if the email has no calendar attachment.
+    """
+    for att in attachments:
+        if att.content_type not in ("text/calendar", "application/ics"):
+            continue
+        try:
+            cal = Calendar.from_ical(att.payload)
+        except Exception:
+            log.warning("Failed to parse calendar attachment")
+            return None
+        raw_method = cal.get("method")
+        method = str(raw_method).lower() if raw_method else "request"
+        for component in cal.walk():
+            if component.name != "VEVENT":
+                continue
+            dtstart = component.get("dtstart")
+            dtend = component.get("dtend")
+            sequence = int(component.get("sequence", 0))
+            attendees = component.get("attendee")
+            if attendees is None:
+                guest_count = 0
+            elif isinstance(attendees, list):
+                guest_count = len(attendees)
+            else:
+                guest_count = 1
+            partstat = None
+            if method == "reply":
+                first = attendees[0] if isinstance(attendees, list) else attendees
+                if first is not None:
+                    raw = str(first.params.get("partstat", "")).lower()
+                    partstat = raw or None
+            return {
+                "start": dtstart.dt.isoformat() if dtstart else None,
+                "end": dtend.dt.isoformat() if dtend else None,
+                "guest_count": guest_count,
+                "method": method,
+                "is_update": method == "request" and sequence > 0,
+                "partstat": partstat,
+            }
+    return None
+
+
+_CALENDAR_CONTENT_TYPES = frozenset({"text/calendar", "application/ics"})
+
+
+def _has_non_calendar_attachments(attachments) -> bool:
+    return any(att.content_type not in _CALENDAR_CONTENT_TYPES for att in attachments)
 
 
 def _parse_auth_results(headers: dict) -> tuple[bool, bool, bool]:

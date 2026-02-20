@@ -26,7 +26,7 @@ def _make_id(priority: int) -> str:
     return f"{priority}_{ts}_{short_uuid}"
 
 
-def enqueue(payload: dict, priority: int = 5) -> str:
+def enqueue(payload: dict, priority: int = 5, provenance: str | None = None) -> str:
     task_id = _make_id(priority)
     task = {
         "id": task_id,
@@ -35,6 +35,8 @@ def enqueue(payload: dict, priority: int = 5) -> str:
         "priority": priority,
         "payload": payload,
     }
+    if provenance is not None:
+        task["provenance"] = provenance
     path = BASE_DIR / "pending" / f"{task_id}.yaml"
     path.write_text(yaml.dump(task, default_flow_style=False, sort_keys=False))
     return task_id

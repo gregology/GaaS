@@ -1,7 +1,8 @@
 from app.config import AutomationConfig, ClassificationConfig
-from app.integrations.email.classify import (
-    _build_schema,
+from app.integrations.email.classify import _build_schema
+from app.integrations.email.evaluate import (
     _check_condition,
+    _check_deterministic_condition,
     _conditions_match,
     _eval_operator,
     _evaluate_automations,
@@ -22,6 +23,33 @@ CLASSIFICATIONS = {
     "requires_response": BOOLEAN_CLS,
     "priority": ENUM_CLS,
 }
+
+
+class _MockEmail:
+    def __init__(self, **kwargs):
+        self.from_address = kwargs.get("from_address", "sender@example.com")
+        self.authentication = kwargs.get("authentication", {
+            "dkim_pass": True, "dmarc_pass": True, "spf_pass": True,
+        })
+        self.calendar = kwargs.get("calendar", None)
+
+    @property
+    def domain(self):
+        _, _, d = self.from_address.partition("@")
+        return d.lower()
+
+    @property
+    def is_noreply(self):
+        import re
+        return bool(re.match(
+            r"^(no-?reply|do-?not-?reply|mailer-daemon|postmaster)@",
+            self.from_address,
+            re.IGNORECASE,
+        ))
+
+    @property
+    def is_calendar_event(self):
+        return self.calendar is not None
 
 
 # ---------------------------------------------------------------------------
@@ -115,32 +143,143 @@ class TestCheckCondition:
 
 
 # ---------------------------------------------------------------------------
+# _check_deterministic_condition
+# ---------------------------------------------------------------------------
+
+
+class TestCheckDeterministicCondition:
+    def test_boolean_identity(self):
+        assert _check_deterministic_condition(True, True) is True
+        assert _check_deterministic_condition(False, False) is True
+        assert _check_deterministic_condition(True, False) is False
+
+    def test_string_equality(self):
+        assert _check_deterministic_condition("example.com", "example.com") is True
+        assert _check_deterministic_condition("other.com", "example.com") is False
+
+    def test_list_membership(self):
+        assert _check_deterministic_condition("work.com", ["work.com", "home.com"]) is True
+        assert _check_deterministic_condition("other.com", ["work.com", "home.com"]) is False
+
+    def test_now_lt_past_datetime(self):
+        past = "2020-01-01T00:00:00+00:00"
+        assert _check_deterministic_condition(past, "<now()") is True
+
+    def test_now_lt_future_datetime(self):
+        future = "2099-01-01T00:00:00+00:00"
+        assert _check_deterministic_condition(future, "<now()") is False
+
+    def test_now_gt_future_datetime(self):
+        future = "2099-01-01T00:00:00+00:00"
+        assert _check_deterministic_condition(future, ">now()") is True
+
+    def test_now_gt_past_datetime(self):
+        past = "2020-01-01T00:00:00+00:00"
+        assert _check_deterministic_condition(past, ">now()") is False
+
+    def test_now_date_only_value(self):
+        assert _check_deterministic_condition("2020-01-01", "<now()") is True
+
+    def test_now_invalid_value_returns_false(self):
+        assert _check_deterministic_condition("not-a-date", "<now()") is False
+
+    def test_now_whitespace_tolerance(self):
+        past = "2020-01-01T00:00:00+00:00"
+        assert _check_deterministic_condition(past, " < now() ") is True
+
+
+# ---------------------------------------------------------------------------
 # _conditions_match
 # ---------------------------------------------------------------------------
 
 
 class TestConditionsMatch:
-    def test_all_conditions_must_match(self):
+    def test_all_classification_conditions_must_match(self):
+        email = _MockEmail()
         result = {"human": 0.9, "requires_response": True, "priority": "high"}
-        when = {"human": 0.8, "requires_response": True}
-        assert _conditions_match(when, result, CLASSIFICATIONS) is True
+        when = {"classification.human": 0.8, "classification.requires_response": True}
+        assert _conditions_match(when, email, result, CLASSIFICATIONS) is True
 
-        when_fail = {"human": 0.8, "requires_response": False}
-        assert _conditions_match(when_fail, result, CLASSIFICATIONS) is False
+        when_fail = {"classification.human": 0.8, "classification.requires_response": False}
+        assert _conditions_match(when_fail, email, result, CLASSIFICATIONS) is False
 
     def test_missing_classification_key_returns_false(self):
+        email = _MockEmail()
         result = {"human": 0.9}
-        when = {"human": 0.8, "nonexistent_key": True}
-        assert _conditions_match(when, result, CLASSIFICATIONS) is False
+        when = {"classification.human": 0.8, "classification.nonexistent_key": True}
+        assert _conditions_match(when, email, result, CLASSIFICATIONS) is False
 
     def test_missing_result_key_returns_false(self):
+        email = _MockEmail()
         result = {}
-        when = {"human": 0.8}
-        assert _conditions_match(when, result, CLASSIFICATIONS) is False
+        when = {"classification.human": 0.8}
+        assert _conditions_match(when, email, result, CLASSIFICATIONS) is False
 
     def test_empty_when_matches_everything(self):
+        email = _MockEmail()
         result = {"human": 0.5, "requires_response": False, "priority": "low"}
-        assert _conditions_match({}, result, CLASSIFICATIONS) is True
+        assert _conditions_match({}, email, result, CLASSIFICATIONS) is True
+
+    def test_domain_condition(self):
+        email = _MockEmail(from_address="user@work.com")
+        when = {"domain": "work.com"}
+        assert _conditions_match(when, email, {}, CLASSIFICATIONS) is True
+        assert _conditions_match({"domain": "other.com"}, email, {}, CLASSIFICATIONS) is False
+
+    def test_authentication_condition(self):
+        email = _MockEmail(authentication={"dkim_pass": True, "spf_pass": False})
+        assert _conditions_match(
+            {"authentication.dkim_pass": True}, email, {}, CLASSIFICATIONS,
+        ) is True
+        assert _conditions_match(
+            {"authentication.spf_pass": True}, email, {}, CLASSIFICATIONS,
+        ) is False
+
+    def test_is_noreply_condition(self):
+        noreply = _MockEmail(from_address="noreply@service.com")
+        assert _conditions_match({"is_noreply": True}, noreply, {}, CLASSIFICATIONS) is True
+
+        human = _MockEmail(from_address="alice@example.com")
+        assert _conditions_match({"is_noreply": True}, human, {}, CLASSIFICATIONS) is False
+
+    def test_mixed_deterministic_and_classification(self):
+        email = _MockEmail(from_address="user@work.com")
+        result = {"human": 0.9, "requires_response": True, "priority": "high"}
+        when = {"domain": "work.com", "classification.human": 0.8}
+        assert _conditions_match(when, email, result, CLASSIFICATIONS) is True
+
+        when_fail = {"domain": "other.com", "classification.human": 0.8}
+        assert _conditions_match(when_fail, email, result, CLASSIFICATIONS) is False
+
+    def test_missing_authentication_key_returns_false(self):
+        email = _MockEmail(authentication={"dkim_pass": True})
+        assert _conditions_match(
+            {"authentication.nonexistent": True}, email, {}, CLASSIFICATIONS,
+        ) is False
+
+    def test_is_calendar_event_condition(self):
+        cal_email = _MockEmail(calendar={"start": "2026-03-01T14:00:00Z", "end": "2026-03-01T15:00:00Z", "guest_count": 3})
+        assert _conditions_match({"is_calendar_event": True}, cal_email, {}, CLASSIFICATIONS) is True
+
+        normal_email = _MockEmail()
+        assert _conditions_match({"is_calendar_event": True}, normal_email, {}, CLASSIFICATIONS) is False
+
+    def test_calendar_guest_count_condition(self):
+        cal_email = _MockEmail(calendar={"start": "2026-03-01T14:00:00Z", "end": "2026-03-01T15:00:00Z", "guest_count": 3})
+        assert _conditions_match({"calendar.guest_count": 3}, cal_email, {}, CLASSIFICATIONS) is True
+        assert _conditions_match({"calendar.guest_count": 5}, cal_email, {}, CLASSIFICATIONS) is False
+
+    def test_calendar_key_returns_missing_when_no_calendar(self):
+        email = _MockEmail()
+        assert _conditions_match({"calendar.guest_count": 3}, email, {}, CLASSIFICATIONS) is False
+
+    def test_calendar_end_past_event_matches_lt_now(self):
+        past_cal = _MockEmail(calendar={"start": "2020-01-01T14:00:00+00:00", "end": "2020-01-01T15:00:00+00:00", "guest_count": 1})
+        assert _conditions_match({"calendar.end": "<now()"}, past_cal, {}, CLASSIFICATIONS) is True
+
+    def test_calendar_end_future_event_does_not_match_lt_now(self):
+        future_cal = _MockEmail(calendar={"start": "2099-01-01T14:00:00+00:00", "end": "2099-01-01T15:00:00+00:00", "guest_count": 1})
+        assert _conditions_match({"calendar.end": "<now()"}, future_cal, {}, CLASSIFICATIONS) is False
 
 
 # ---------------------------------------------------------------------------
@@ -150,38 +289,50 @@ class TestConditionsMatch:
 
 class TestEvaluateAutomations:
     def test_matching_automation_returns_actions(self):
+        email = _MockEmail()
         automations = [
-            AutomationConfig(when={"human": 0.8}, then=["archive"]),
+            AutomationConfig(when={"classification.human": 0.8}, then=["archive"]),
         ]
         result = {"human": 0.9, "requires_response": False, "priority": "low"}
-        actions = _evaluate_automations(automations, result, CLASSIFICATIONS)
+        actions = _evaluate_automations(automations, email, result, CLASSIFICATIONS)
         assert actions == ["archive"]
 
     def test_non_matching_automation_returns_empty(self):
+        email = _MockEmail()
         automations = [
-            AutomationConfig(when={"human": 0.8}, then=["archive"]),
+            AutomationConfig(when={"classification.human": 0.8}, then=["archive"]),
         ]
         result = {"human": 0.3, "requires_response": False, "priority": "low"}
-        actions = _evaluate_automations(automations, result, CLASSIFICATIONS)
+        actions = _evaluate_automations(automations, email, result, CLASSIFICATIONS)
         assert actions == []
 
     def test_multiple_matching_automations_combine_actions(self):
+        email = _MockEmail()
         automations = [
-            AutomationConfig(when={"human": 0.5}, then=["archive"]),
+            AutomationConfig(when={"classification.human": 0.5}, then=["archive"]),
             AutomationConfig(
-                when={"requires_response": True},
+                when={"classification.requires_response": True},
                 then=[{"draft_reply": "noted"}],
             ),
         ]
         result = {"human": 0.9, "requires_response": True, "priority": "low"}
-        actions = _evaluate_automations(automations, result, CLASSIFICATIONS)
+        actions = _evaluate_automations(automations, email, result, CLASSIFICATIONS)
         assert "archive" in actions
         assert {"draft_reply": "noted"} in actions
 
     def test_no_automations_returns_empty(self):
+        email = _MockEmail()
         result = {"human": 0.9, "requires_response": True, "priority": "high"}
-        actions = _evaluate_automations([], result, CLASSIFICATIONS)
+        actions = _evaluate_automations([], email, result, CLASSIFICATIONS)
         assert actions == []
+
+    def test_deterministic_automation(self):
+        email = _MockEmail(from_address="noreply@spam.com")
+        automations = [
+            AutomationConfig(when={"is_noreply": True}, then=["archive"]),
+        ]
+        actions = _evaluate_automations(automations, email, {}, CLASSIFICATIONS)
+        assert actions == ["archive"]
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,199 @@
+"""Tests for provenance derivation and safety validation.
+
+The provenance system determines whether an automation's conditions
+are deterministic (rule), non-deterministic (llm), or mixed (hybrid).
+This is safety-critical because it gates irreversible actions.
+"""
+
+from unittest.mock import MagicMock
+
+from app.config import (
+    AutomationConfig,
+    YoloAction,
+    _validate_automation_safety,
+    resolve_provenance,
+)
+from app.integrations.email.const import DETERMINISTIC_SOURCES, IRREVERSIBLE_ACTIONS
+
+
+# ---------------------------------------------------------------------------
+# resolve_provenance
+# ---------------------------------------------------------------------------
+
+
+class TestResolveProvenance:
+    def test_pure_deterministic_single(self):
+        assert resolve_provenance({"domain": "x.com"}, DETERMINISTIC_SOURCES) == "rule"
+        assert resolve_provenance({"authentication.dkim_pass": True}, DETERMINISTIC_SOURCES) == "rule"
+        assert resolve_provenance({"is_noreply": True}, DETERMINISTIC_SOURCES) == "rule"
+        assert resolve_provenance({"from_address": "x@y.com"}, DETERMINISTIC_SOURCES) == "rule"
+
+    def test_pure_deterministic_multiple(self):
+        when = {
+            "authentication.dkim_pass": True,
+            "authentication.spf_pass": True,
+            "domain": "work.com",
+        }
+        assert resolve_provenance(when, DETERMINISTIC_SOURCES) == "rule"
+
+    def test_pure_nondeterministic_single(self):
+        assert resolve_provenance({"classification.human": 0.8}, DETERMINISTIC_SOURCES) == "llm"
+
+    def test_pure_nondeterministic_multiple(self):
+        when = {
+            "classification.human": 0.8,
+            "classification.requires_response": True,
+        }
+        assert resolve_provenance(when, DETERMINISTIC_SOURCES) == "llm"
+
+    def test_hybrid(self):
+        when = {
+            "authentication.dkim_pass": True,
+            "classification.human": "> 0.8",
+        }
+        assert resolve_provenance(when, DETERMINISTIC_SOURCES) == "hybrid"
+
+    def test_empty_when_is_rule(self):
+        assert resolve_provenance({}, DETERMINISTIC_SOURCES) == "rule"
+
+    def test_all_deterministic_sources_recognized(self):
+        for source in DETERMINISTIC_SOURCES:
+            when = {source: "test_value"}
+            assert resolve_provenance(when, DETERMINISTIC_SOURCES) == "rule", (
+                f"{source} should be recognized as deterministic"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Safety validation
+# ---------------------------------------------------------------------------
+
+
+def _make_integration(name, automations):
+    integration = MagicMock()
+    integration.name = name
+    integration.type = "email"
+    integration.automations = list(automations)
+    return integration
+
+
+class TestSafetyValidation:
+    def test_deterministic_irreversible_allowed(self):
+        """Irreversible action from deterministic provenance loads fine."""
+        automations = [
+            AutomationConfig(
+                when={"is_noreply": True, "domain": "spam.com"},
+                then=["unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+        assert len(integration.automations) == 1
+
+    def test_nondeterministic_irreversible_blocked(self):
+        """Irreversible action from LLM provenance is blocked."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=["unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert len(warnings) == 1
+        assert "unsubscribe" in warnings[0]
+        assert "disabled" in warnings[0]
+        assert len(integration.automations) == 0
+
+    def test_hybrid_irreversible_blocked(self):
+        """Hybrid provenance treated as non-deterministic for safety."""
+        automations = [
+            AutomationConfig(
+                when={"authentication.dkim_pass": True, "classification.human": 0.9},
+                then=["unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert len(warnings) == 1
+        assert len(integration.automations) == 0
+
+    def test_yolo_overrides_safety_block(self):
+        """!yolo tag allows irreversible action from non-deterministic provenance."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=[YoloAction("unsubscribe")],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+        assert len(integration.automations) == 1
+
+    def test_reversible_action_always_allowed(self):
+        """Reversible actions are never blocked regardless of provenance."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=["archive"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+        assert len(integration.automations) == 1
+
+    def test_only_unsafe_automations_blocked(self):
+        """Only automations with irreversible non-deterministic actions are blocked."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": 0.8},
+                then=["archive"],
+            ),
+            AutomationConfig(
+                when={"classification.human": "> 0.9"},
+                then=["unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert len(warnings) == 1
+        assert len(integration.automations) == 1
+        assert integration.automations[0].then == ["archive"]
+
+    def test_mixed_actions_with_one_irreversible(self):
+        """An automation with both reversible and irreversible actions is blocked
+        if the irreversible action is not yolo-tagged."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": 0.8},
+                then=["archive", "unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert len(warnings) == 1
+        assert len(integration.automations) == 0
+
+    def test_integration_without_automations_ignored(self):
+        """Integrations without automations attribute are skipped."""
+        integration = MagicMock(spec=[])  # no attributes
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+
+    def test_warning_message_includes_details(self):
+        """Warning message contains integration name, action, and provenance."""
+        automations = [
+            AutomationConfig(
+                when={"classification.robot": "> 0.9"},
+                then=["unsubscribe"],
+            ),
+        ]
+        integration = _make_integration("personal", automations)
+        warnings = _validate_automation_safety([integration])
+        assert "personal" in warnings[0]
+        assert "unsubscribe" in warnings[0]
+        assert "llm" in warnings[0]
+        assert "!yolo" in warnings[0]

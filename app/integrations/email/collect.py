@@ -23,20 +23,20 @@ def handle(task: dict):
         email = mb.get_email(uid)
 
     notes_dir = config.directories.notes
-    store = EmailStore(path=notes_dir / "emails" / integration.username)
-    store.save(email)
+    store = EmailStore(path=notes_dir / "emails" / integration.name)
+    message_id = email._message_id or f"imap_{uid}"
 
-    if all(email.authentication.values()):
-        queue.enqueue({
-            "type": "email.classify",
-            "integration": integration_name,
-            "uid": uid,
-        }, priority=6)
-        log.info("email.collect: queued email.classify for uid=%s", uid)
+    if store.find_by_message_id(message_id):
+        store.update_mutable(message_id, email)
+        log.info("email.collect: updated mutable fields for uid=%s", uid)
     else:
-        queue.enqueue({
-            "type": "email.classify",
-            "integration": integration_name,
-            "uid": uid,
-        }, priority=9)
-        log.info("email.collect: queued low priority email.classify for uid=%s", uid)
+        store.save(email)
+        log.info("email.collect: saved new email uid=%s", uid)
+
+    priority = 6 if all(email.authentication.values()) else 9
+    queue.enqueue({
+        "type": "email.classify",
+        "integration": integration_name,
+        "uid": uid,
+    }, priority=priority)
+    log.info("email.collect: queued email.classify for uid=%s", uid)
