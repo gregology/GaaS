@@ -17,6 +17,9 @@ log = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+jinja_env.filters["scrub"] = lambda s: str(s).replace("END UNTRUSTED", "")
+
+MAX_BODY_CHARS = 5_000
 
 _TYPE_TO_SCHEMA = {
     "confidence": lambda _cls: {"type": "number"},
@@ -36,11 +39,14 @@ def _build_schema(classifications: dict[str, ClassificationConfig]) -> dict:
 
 
 def _render_prompt(email, classifications: dict[str, ClassificationConfig]) -> str:
+    body = email.contents_clean
+    if len(body) > MAX_BODY_CHARS:
+        body = body[:MAX_BODY_CHARS] + "\n... (body truncated)"
     template = jinja_env.get_template("classify_email.jinja")
     return template.render(
-        beginning_salt=secrets.token_hex(16),
-        end_salt=secrets.token_hex(16),
+        salt=secrets.token_hex(16),
         email=email,
+        contents_clean=body,
         classifications=classifications,
     )
 

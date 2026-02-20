@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+jinja_env.filters["scrub"] = lambda s: str(s).replace("END UNTRUSTED", "")
 
 MAX_DIFF_CHARS = 10_000
 
@@ -48,8 +49,7 @@ def _render_prompt(
         diff = diff[:MAX_DIFF_CHARS] + "\n... (diff truncated)"
     template = jinja_env.get_template("classify_github_pr.jinja")
     return template.render(
-        beginning_salt=secrets.token_hex(16),
-        end_salt=secrets.token_hex(16),
+        salt=secrets.token_hex(16),
         title=detail["title"],
         author=detail["author"],
         body=detail["body"],
