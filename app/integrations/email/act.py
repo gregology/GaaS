@@ -1,11 +1,14 @@
 import logging
 
 from app.config import config
+from .const import SIMPLE_ACTIONS
 from .mail import Mailbox
+from .store import EmailStore
 
 log = logging.getLogger(__name__)
 
-SIMPLE_ACTIONS = {"archive", "spam", "unsubscribe"}
+# Actions that move the email to a different IMAP folder — the note mirrors it.
+_FOLDER_MOVES: frozenset[str] = frozenset({"archive", "spam", "trash"})
 
 
 def _execute_action(email, action) -> None:
@@ -17,6 +20,8 @@ def _execute_action(email, action) -> None:
     elif isinstance(action, dict):
         if "draft_reply" in action:
             email.draft_reply(action["draft_reply"])
+        elif "move_to" in action:
+            email.move_to(action["move_to"])
         else:
             log.warning("email.act: unknown action dict %r, skipping", action)
 
@@ -26,7 +31,14 @@ def handle(task: dict):
     integration = config.get_integration(integration_name)
     uid = task["payload"]["uid"]
     actions = task["payload"]["actions"]
-    log.info("email.act: uid=%s actions=%s (integration=%s)", uid, actions, integration_name)
+    provenance = task.get("provenance", "unknown")
+    log.info(
+        "email.act: uid=%s actions=%s provenance=%s (integration=%s)",
+        uid, actions, provenance, integration_name,
+    )
+
+    notes_dir = config.directories.notes
+    store = EmailStore(path=notes_dir / "emails" / integration.name) if notes_dir else None
 
     with Mailbox(
         imap_server=integration.imap_server,
@@ -35,6 +47,12 @@ def handle(task: dict):
         password=integration.password,
     ) as mb:
         email = mb.get_email(uid)
+        message_id = email._message_id or f"imap_{uid}"
 
         for action in actions:
             _execute_action(email, action)
+            if store:
+                if isinstance(action, str) and action in _FOLDER_MOVES:
+                    store.move_to_subdir(message_id, "synced")
+                elif isinstance(action, dict) and "move_to" in action:
+                    store.move_to_subdir(message_id, "synced")

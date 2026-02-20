@@ -8,7 +8,7 @@ radius is bounded.
 from hypothesis import given, settings, strategies as st
 
 from app.config import AutomationConfig, ClassificationConfig
-from app.integrations.email.classify import _evaluate_automations
+from app.integrations.email.evaluate import _evaluate_automations
 
 # ---------------------------------------------------------------------------
 # Classification configs matching the default set
@@ -29,20 +29,42 @@ CLASSIFICATIONS = {
 
 # Realistic automation configs covering every action type
 AUTOMATIONS = [
-    AutomationConfig(when={"user_agreement_update": True}, then=["archive"]),
-    AutomationConfig(when={"human": 0.8}, then=["spam"]),
+    AutomationConfig(when={"classification.user_agreement_update": True}, then=["archive"]),
+    AutomationConfig(when={"classification.human": 0.8}, then=["spam"]),
     AutomationConfig(
-        when={"human": 0.8, "requires_response": True},
+        when={"classification.human": 0.8, "classification.requires_response": True},
         then=[{"draft_reply": "I'll review this shortly."}],
     ),
     AutomationConfig(
-        when={"priority": ["high", "critical"]},
+        when={"classification.priority": ["high", "critical"]},
         then=[{"draft_reply": "Urgent, reviewing now."}],
     ),
-    AutomationConfig(when={"human": ">0.9"}, then=["unsubscribe"]),
+    AutomationConfig(when={"classification.human": ">0.9"}, then=["unsubscribe"]),
 ]
 
 ALLOWED_ACTIONS = {"archive", "spam", "unsubscribe", "draft_reply"}
+
+
+class _MockEmail:
+    def __init__(self):
+        self.from_address = "sender@example.com"
+        self.authentication = {"dkim_pass": True, "dmarc_pass": True, "spf_pass": True}
+        self.calendar = None
+
+    @property
+    def domain(self):
+        return "example.com"
+
+    @property
+    def is_noreply(self):
+        return False
+
+    @property
+    def is_calendar_event(self):
+        return self.calendar is not None
+
+
+_DEFAULT_EMAIL = _MockEmail()
 
 # ---------------------------------------------------------------------------
 # Hypothesis strategy: generate any possible classification result
@@ -79,7 +101,7 @@ def _extract_action_names(actions: list) -> set[str]:
 def test_only_known_actions_produced(result):
     """For ALL possible classification outputs, every action produced
     must be in the allowed set. No unknown action can ever appear."""
-    actions = _evaluate_automations(AUTOMATIONS, result, CLASSIFICATIONS)
+    actions = _evaluate_automations(AUTOMATIONS, _DEFAULT_EMAIL, result, CLASSIFICATIONS)
     produced = _extract_action_names(actions)
     unknown = produced - ALLOWED_ACTIONS
     assert not unknown, f"Unknown actions produced: {unknown} from result={result}"
@@ -91,7 +113,7 @@ def test_action_count_bounded(result):
     """The total number of actions from a single evaluation should never
     exceed the sum of all possible automation outputs."""
     max_possible = sum(len(a.then) for a in AUTOMATIONS)
-    actions = _evaluate_automations(AUTOMATIONS, result, CLASSIFICATIONS)
+    actions = _evaluate_automations(AUTOMATIONS, _DEFAULT_EMAIL, result, CLASSIFICATIONS)
     assert len(actions) <= max_possible, (
         f"Produced {len(actions)} actions, max possible is {max_possible}"
     )
@@ -103,11 +125,11 @@ def test_missing_key_never_matches(result):
     """An automation referencing a classification key not present in the
     result should never fire."""
     automation_with_missing = AutomationConfig(
-        when={"nonexistent_classification": True},
+        when={"classification.nonexistent_classification": True},
         then=["archive"],
     )
     actions = _evaluate_automations(
-        [automation_with_missing], result, CLASSIFICATIONS
+        [automation_with_missing], _DEFAULT_EMAIL, result, CLASSIFICATIONS
     )
     assert actions == [], (
         f"Automation with nonexistent key fired: actions={actions}"
