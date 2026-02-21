@@ -188,6 +188,28 @@ class GitHubIntegration(BaseModel):
     name: str
     schedule: ScheduleConfig | None = None
     llm: str = "default"
+    include_mentions: bool = False
+    orgs: list[str] | None = None
+    repos: list[str] | None = None
+    classifications: dict[str, ClassificationConfig] = {}
+    automations: list[AutomationConfig] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_classifications(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        raw = data.get("classifications")
+        if not raw or not isinstance(raw, dict):
+            return data
+        normalized = {}
+        for key, value in raw.items():
+            if isinstance(value, str):
+                normalized[key] = {"prompt": value}
+            else:
+                normalized[key] = value
+        data["classifications"] = normalized
+        return data
 
 
 Integration = Annotated[
@@ -207,13 +229,26 @@ class AppConfig(BaseModel):
     integrations: list[Integration] = []
     directories: DirectoriesConfig = DirectoriesConfig()
 
-    def get_integration(self, name: str) -> Integration:
+    @model_validator(mode="after")
+    def _check_unique_names(self) -> AppConfig:
+        seen: set[tuple[str, str]] = set()
+        for i in self.integrations:
+            key = (i.type, i.name)
+            if key in seen:
+                raise ValueError(
+                    f"Duplicate integration: type={i.type!r} name={i.name!r}. "
+                    f"Names must be unique within each integration type."
+                )
+            seen.add(key)
+        return self
+
+    def get_integration(self, name: str, integration_type: str) -> Integration:
         for entry in self.integrations:
-            if entry.name == name:
+            if entry.name == name and entry.type == integration_type:
                 return entry
-        available = [i.name for i in self.integrations]
+        available = [(i.type, i.name) for i in self.integrations]
         raise ValueError(
-            f"Unknown integration '{name}'. Available: {available}"
+            f"Unknown integration type={integration_type!r} name={name!r}. Available: {available}"
         )
 
     def get_integrations_by_type(self, integration_type: str) -> list[Integration]:
