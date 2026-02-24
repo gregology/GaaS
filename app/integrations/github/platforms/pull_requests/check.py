@@ -4,17 +4,18 @@ import logging
 
 from app import queue
 from app.config import config
-from ...client import GitHubClient
 from .store import PullRequestStore
 
 log = logging.getLogger(__name__)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "github")
-    platform = config.get_platform(integration_name, "github", "pull_requests")
-    log.info("github.pull_requests.check: starting (integration=%s)", integration_name)
+    from ...client import GitHubClient
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "pull_requests")
+    log.info("github.pull_requests.check: starting (integration=%s)", integration_id)
 
     client = GitHubClient()
     store = PullRequestStore(
@@ -40,7 +41,7 @@ def handle(task: dict):
     for pr in remote_prs:
         queue.enqueue({
             "type": "github.pull_requests.collect",
-            "integration": integration_name,
+            "integration": integration_id,
             "org": pr["org"],
             "repo": pr["repo"],
             "number": pr["number"],

@@ -4,17 +4,18 @@ import logging
 
 from app import queue
 from app.config import config
-from ...client import GitHubClient
 from .store import IssueStore
 
 log = logging.getLogger(__name__)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "github")
-    platform = config.get_platform(integration_name, "github", "issues")
-    log.info("github.issues.check: starting (integration=%s)", integration_name)
+    from ...client import GitHubClient
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "issues")
+    log.info("github.issues.check: starting (integration=%s)", integration_id)
 
     client = GitHubClient()
     store = IssueStore(
@@ -40,7 +41,7 @@ def handle(task: dict):
     for issue in remote_issues:
         queue.enqueue({
             "type": "github.issues.collect",
-            "integration": integration_name,
+            "integration": integration_id,
             "org": issue["org"],
             "repo": issue["repo"],
             "number": issue["number"],

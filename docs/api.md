@@ -10,7 +10,7 @@ The FastAPI server exposes a small API for inspecting and manually triggering in
 GET /
 ```
 
-Returns a basic health check response.
+Returns `{"status": "ok"}`.
 
 ### List integrations
 
@@ -18,37 +18,32 @@ Returns a basic health check response.
 GET /integrations
 ```
 
-Returns all configured integrations with their type, name, and enabled platforms.
+Returns all configured integrations with their composite ID, type, name, and enabled platforms.
 
 ### Trigger an integration
 
 ```
-POST /integrations/{type}/{name}/run
-POST /integrations/{type}/{name}/run?platform=pull_requests
+POST /integrations/{integration_id}/run
+POST /integrations/{integration_id}/{platform}/run
 ```
 
-Manually triggers an integration's entry tasks. Without the `platform` query parameter, this enqueues entry tasks for all enabled platforms. With `platform`, only the specified platform is triggered.
+Enqueues entry tasks for an integration. The first form fires all enabled platforms. The second targets a specific one.
 
-The `{type}` parameter matches the integration's `type` field (e.g. `email`, `github`). The `{name}` parameter matches the `name` field from your `config.yaml` integration entry.
-
-Examples:
+The `{integration_id}` is a composite ID in `{type}.{name}` format, like `email.personal` or `github.my_repos`. You can grab these from `GET /integrations`.
 
 ```bash
-# Trigger all platforms for the personal email integration
-curl -X POST http://localhost:8000/integrations/email/personal/run
+# Fire all platforms for the personal email integration
+curl -X POST http://localhost:8000/integrations/email.personal/run
 
-# Trigger all platforms for the GitHub integration
-curl -X POST http://localhost:8000/integrations/github/my_repos/run
-
-# Trigger only the issues platform
-curl -X POST http://localhost:8000/integrations/github/my_repos/run?platform=issues
+# Just the GitHub issues platform
+curl -X POST http://localhost:8000/integrations/github.my_repos/issues/run
 ```
 
 ## Scheduled vs manual triggers
 
-There is no difference in behavior. A manual POST enqueues the same entry tasks that the cron scheduler enqueues automatically. The worker processes both identically. Downstream task chains (collect, classify, evaluate, act) are the same regardless of how the entry task was created.
+No difference in behavior. A manual POST enqueues the same entry tasks that the cron scheduler would. The worker processes both identically, and the downstream task chain (collect, classify, evaluate, act) is the same either way.
 
-Manual triggers are useful for testing your config, debugging an integration, or running a one-off check outside the normal schedule.
+Useful for having an external trigger, testing your config, or debugging an integration outside the normal schedule.
 
 ## Running the server
 

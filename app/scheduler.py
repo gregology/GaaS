@@ -68,13 +68,13 @@ def init_schedules(app: FastAPI) -> Crons:
                 )
                 continue
 
-            name = f"{integration.type}_{integration.name}_{platform_name}"
+            name = f"{integration.id}_{platform_name}"
 
             def make_job(task_type=entry_task, int_entry=integration, plat_name=platform_name):
                 def job():
                     payload = {
                         "type": task_type,
-                        "integration": int_entry.name,
+                        "integration": int_entry.id,
                         "platform": plat_name,
                     }
                     log.info("Scheduled job: enqueueing %s", payload)

@@ -2,17 +2,18 @@ import logging
 
 from app import queue
 from app.config import config
-from ...mail import Mailbox
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
-    platform = config.get_platform(integration_name, "email", "inbox")
-    log.info("email.inbox.check: starting (integration=%s)", integration_name)
+    from ...mail import Mailbox
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "inbox")
+    log.info("email.inbox.check: starting (integration=%s)", integration_id)
 
     notes_dir = config.directories.notes
     store = EmailStore(path=notes_dir / "emails" / integration.name)
@@ -46,7 +47,7 @@ def handle(task: dict):
     for mid, uid in inbox_by_mid.items():
         queue.enqueue({
             "type": "email.inbox.collect",
-            "integration": integration_name,
+            "integration": integration_id,
             "uid": uid,
         }, priority=3)
 

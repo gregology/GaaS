@@ -204,6 +204,11 @@ class BaseIntegrationConfig(BaseModel):
     schedule: ScheduleConfig | None = None
     llm: str = "default"
 
+    @property
+    def id(self) -> str:
+        """Composite identity following HA's entity_id pattern: ``{type}.{name}``."""
+        return f"{self.type}.{self.name}"
+
 
 class DirectoriesConfig(BaseModel):
     notes: Path | None = None
@@ -420,39 +425,38 @@ def load_config(config_path: Path = _CONFIG_PATH) -> tuple:
 
         @model_validator(mode="after")
         def _check_unique_names(self):
-            seen: set[tuple[str, str]] = set()
+            seen: set[str] = set()
             for i in self.integrations:
-                key = (i.type, i.name)
-                if key in seen:
+                if i.id in seen:
                     raise ValueError(
-                        f"Duplicate integration: type={i.type!r} name={i.name!r}. "
-                        f"Names must be unique within each integration type."
+                        f"Duplicate integration: {i.id!r}. "
+                        f"Each {i.type}.name must be unique."
                     )
-                seen.add(key)
+                seen.add(i.id)
             return self
 
-        def get_integration(self, name: str, integration_type: str):
+        def get_integration(self, integration_id: str):
             for entry in self.integrations:
-                if entry.name == name and entry.type == integration_type:
+                if entry.id == integration_id:
                     return entry
-            available = [(i.type, i.name) for i in self.integrations]
+            available = [i.id for i in self.integrations]
             raise ValueError(
-                f"Unknown integration type={integration_type!r} name={name!r}. "
+                f"Unknown integration {integration_id!r}. "
                 f"Available: {available}"
             )
 
         def get_integrations_by_type(self, integration_type: str) -> list:
             return [i for i in self.integrations if i.type == integration_type]
 
-        def get_platform(self, name: str, integration_type: str, platform_name: str):
-            integration = self.get_integration(name, integration_type)
+        def get_platform(self, integration_id: str, platform_name: str):
+            integration = self.get_integration(integration_id)
             platforms = getattr(integration, "platforms", None)
             if platforms is None:
-                raise ValueError(f"Integration {integration_type}/{name} has no platforms")
+                raise ValueError(f"Integration {integration_id!r} has no platforms")
             platform = getattr(platforms, platform_name, None)
             if platform is None:
                 raise ValueError(
-                    f"Platform '{platform_name}' not configured in {integration_type}/{name}"
+                    f"Platform {platform_name!r} not configured in {integration_id!r}"
                 )
             return platform
 

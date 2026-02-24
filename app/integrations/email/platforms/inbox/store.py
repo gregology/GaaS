@@ -3,12 +3,14 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import frontmatter
 
 from app.store import NoteStore
 
-from ...mail import Email
+if TYPE_CHECKING:
+    from ...mail import Email
 
 log = logging.getLogger(__name__)
 

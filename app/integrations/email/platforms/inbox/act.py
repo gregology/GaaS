@@ -2,7 +2,6 @@ import logging
 
 from app.config import config
 from .const import SIMPLE_ACTIONS
-from ...mail import Mailbox
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
@@ -27,14 +26,16 @@ def _execute_action(email, action) -> None:
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
+    from ...mail import Mailbox
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
     uid = task["payload"]["uid"]
     actions = task["payload"]["actions"]
     provenance = task.get("provenance", "unknown")
     log.info(
         "email.inbox.act: uid=%s actions=%s provenance=%s (integration=%s)",
-        uid, actions, provenance, integration_name,
+        uid, actions, provenance, integration_id,
     )
 
     notes_dir = config.directories.notes

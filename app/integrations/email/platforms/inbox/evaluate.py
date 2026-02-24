@@ -195,11 +195,11 @@ def _evaluate_automations(
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
-    platform = config.get_platform(integration_name, "email", "inbox")
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "inbox")
     message_id = task["payload"]["message_id"]
-    log.info("email.inbox.evaluate: message_id=%s (integration=%s)", message_id, integration_name)
+    log.info("email.inbox.evaluate: message_id=%s (integration=%s)", message_id, integration_id)
 
     notes_dir = config.directories.notes
     store = EmailStore(path=notes_dir / "emails" / integration.name)
@@ -233,7 +233,7 @@ def handle(task: dict):
 
         queue.enqueue({
             "type": "email.inbox.act",
-            "integration": integration_name,
+            "integration": integration_id,
             "uid": uid,
             "actions": unwrapped,
         }, priority=7, provenance=provenance)

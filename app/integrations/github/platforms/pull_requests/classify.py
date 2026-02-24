@@ -12,7 +12,6 @@ from app import queue
 from app.config import ClassificationConfig, config
 from app.llm import LLMConversation
 from .const import DEFAULT_CLASSIFICATIONS
-from ...client import GitHubClient
 from .store import PullRequestStore
 
 log = logging.getLogger(__name__)
@@ -62,13 +61,15 @@ def _render_prompt(
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "github")
-    platform = config.get_platform(integration_name, "github", "pull_requests")
+    from ...client import GitHubClient
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "pull_requests")
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.pull_requests.classify: %s/%s#%d (integration=%s)", org, repo, number, integration_name)
+    log.info("github.pull_requests.classify: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
 
     classifications = platform.classifications or DEFAULT_CLASSIFICATIONS
     llm_config = config.llms[integration.llm]
@@ -116,7 +117,7 @@ def handle(task: dict):
 
     queue.enqueue({
         "type": "github.pull_requests.evaluate",
-        "integration": integration_name,
+        "integration": integration_id,
         "org": org,
         "repo": repo,
         "number": number,

@@ -10,7 +10,6 @@ from app import queue
 from app.config import ClassificationConfig, config
 from app.llm import LLMConversation
 from .const import DEFAULT_CLASSIFICATIONS
-from ...mail import Mailbox
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
@@ -52,11 +51,13 @@ def _render_prompt(email, classifications: dict[str, ClassificationConfig]) -> s
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
-    platform = config.get_platform(integration_name, "email", "inbox")
+    from ...mail import Mailbox
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "inbox")
     uid = task["payload"]["uid"]
-    log.info("email.inbox.classify: uid=%s (integration=%s)", uid, integration_name)
+    log.info("email.inbox.classify: uid=%s (integration=%s)", uid, integration_id)
 
     classifications = platform.classifications or DEFAULT_CLASSIFICATIONS
     llm_config = config.llms[integration.llm]
@@ -102,7 +103,7 @@ def handle(task: dict):
 
     queue.enqueue({
         "type": "email.inbox.evaluate",
-        "integration": integration_name,
+        "integration": integration_id,
         "message_id": message_id,
     }, priority=7)
     log.info("email.inbox.classify: queued evaluate for uid=%s", uid)

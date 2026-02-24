@@ -150,13 +150,13 @@ def _evaluate_automations(
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "github")
-    platform = config.get_platform(integration_name, "github", "issues")
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
+    platform = config.get_platform(integration_id, "issues")
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.issues.evaluate: %s/%s#%d (integration=%s)", org, repo, number, integration_name)
+    log.info("github.issues.evaluate: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
 
     store = IssueStore(
         path=config.directories.notes / "github" / "issues" / integration.name
@@ -193,7 +193,7 @@ def handle(task: dict):
 
     queue.enqueue({
         "type": "github.issues.act",
-        "integration": integration_name,
+        "integration": integration_id,
         "org": org,
         "repo": repo,
         "number": number,
