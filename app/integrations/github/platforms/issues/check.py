@@ -35,7 +35,7 @@ def handle(task: dict):
     stale = active_local - active_remote
     for org, repo, number in stale:
         store.move_to_synced(org, repo, number)
-        log.human("Issue **%s/%s#%d** no longer requires attention — moved to synced/", org, repo, number)
+        log.info("Issue **%s/%s#%d** no longer requires attention — moved to synced/", org, repo, number)
 
     # Enqueue collect for every active issue.
     for issue in remote_issues:

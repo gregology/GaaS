@@ -49,7 +49,6 @@ def handle(task: dict):
             "comment_count": detail["comment_count"],
         })
         log.info("github.issues.collect: saved new issue %s/%s#%d", org, repo, number)
-        log.human("Discovered issue **%s/%s#%d** — %s", org, repo, number, issue["title"])
 
     queue.enqueue({
         "type": "github.issues.classify",

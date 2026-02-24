@@ -40,7 +40,7 @@ def handle(task: dict):
     # Notes whose emails are no longer in the inbox — move to synced/.
     synced = note_mids - inbox_mids
     for mid in synced:
-        log.human("email %s no longer in inbox — moved to synced/", mid)
+        log.info("email %s no longer in inbox — moved to synced/", mid)
         store.move_to_subdir(mid, "synced")
 
     # Enqueue collect for every inbox email (upsert: creates new or refreshes mutable fields).

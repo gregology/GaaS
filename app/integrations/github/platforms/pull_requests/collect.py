@@ -51,7 +51,6 @@ def handle(task: dict):
             "changed_files": detail["changed_files"],
         })
         log.info("github.pull_requests.collect: saved new PR %s/%s#%d", org, repo, number)
-        log.human("Discovered PR **%s/%s#%d** — %s", org, repo, number, pr["title"])
 
     queue.enqueue({
         "type": "github.pull_requests.classify",

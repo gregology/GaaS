@@ -35,7 +35,7 @@ def handle(task: dict):
     stale = active_local - active_remote
     for org, repo, number in stale:
         store.move_to_synced(org, repo, number)
-        log.human("PR **%s/%s#%d** no longer requires attention — moved to synced/", org, repo, number)
+        log.info("PR **%s/%s#%d** no longer requires attention — moved to synced/", org, repo, number)
 
     # Enqueue collect for every active PR (upsert: creates new or refreshes metadata).
     for pr in remote_prs:

@@ -122,16 +122,16 @@ class Email:
     def spam(self) -> None:
         folder = self._mailbox._folder("\\Junk")
         self._mailbox._move(self._uid, folder)
-        log.info("Marked as spam uid=%s subject=%s", self._uid, self.subject)
+        log.human("Marked as spam uid=%s subject=%s", self._uid, self.subject)
 
     def trash(self) -> None:
         folder = self._mailbox._folder("\\Trash")
         self._mailbox._move(self._uid, folder)
-        log.info("Trashed email uid=%s subject=%s", self._uid, self.subject)
+        log.human("Trashed email uid=%s subject=%s", self._uid, self.subject)
 
     def move_to(self, folder: str) -> None:
         self._mailbox._move(self._uid, folder)
-        log.info("Moved email uid=%s to folder=%r subject=%s", self._uid, folder, self.subject)
+        log.human("Moved email uid=%s to folder=%r subject=%s", self._uid, folder, self.subject)
 
     def draft_reply(self, contents: str) -> None:
         subject = _clean_header(self.subject)

@@ -110,7 +110,7 @@ def handle(task: dict):
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         store.update(org, repo, number, classification=classification, classified_by=classified_by)
-        log.human("Classified issue **%s/%s#%d**", org, repo, number)
+        log.info("Classified issue **%s/%s#%d**", org, repo, number)
 
     queue.enqueue({
         "type": "github.issues.evaluate",
