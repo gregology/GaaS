@@ -1,0 +1,19 @@
+domain: github
+name: "GitHub Pull Requests"
+version: "1.0.0"
+entry_task: check
+dependencies: []
+config_schema:
+  properties:
+    include_mentions:
+      type: boolean
+      default: false
+    orgs:
+      type: array
+      items:
+        type: string
+    repos:
+      type: array
+      items:
+        type: string
+  required: []

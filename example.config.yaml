@@ -129,3 +129,4 @@ directories:
   notes: /path/to/notes
   task_queue: /path/to/task_queue
   logs: /path/to/logs
+  # custom_integrations: /path/to/custom_integrations  # User-added integrations (auto-discovered)

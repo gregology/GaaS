@@ -1,18 +1,24 @@
-from app.integrations import email as _email_mod
-from app.integrations import github as _github_mod
+"""Integration handler registry.
+
+Handlers and entry tasks are populated by register_all(), which must be
+called after app.loader.load_all_modules() has loaded integration modules.
+"""
+
+from app.loader import get_manifests, get_modules
 
 HANDLERS: dict[str, callable] = {}
-
-ENTRY_TASKS: dict[str, str] = {
-    "email": "email.check",
-    "github": "github.check",
-}
+ENTRY_TASKS: dict[str, str] = {}
 
 
-def _register(prefix: str, module) -> None:
-    for suffix, handler in module.HANDLERS.items():
-        HANDLERS[f"{prefix}.{suffix}"] = handler
+def register_all() -> None:
+    """Register handlers and entry tasks from all loaded integration modules."""
+    manifests = get_manifests()
+    modules = get_modules()
 
+    for domain, module in modules.items():
+        handlers = getattr(module, "HANDLERS", {})
+        for suffix, handler in handlers.items():
+            HANDLERS[f"{domain}.{suffix}"] = handler
 
-_register("email", _email_mod)
-_register("github", _github_mod)
+        manifest = manifests[domain]
+        ENTRY_TASKS[domain] = f"{domain}.{manifest.entry_task}"

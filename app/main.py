@@ -5,13 +5,20 @@ from fastapi import FastAPI, HTTPException
 import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
 from app.config import config, safety_warnings
-from app.integrations import ENTRY_TASKS
-from app.scheduler import init_schedules
+from app.loader import load_all_modules
+from app.integrations import ENTRY_TASKS, register_all
 
 _log = logging.getLogger(__name__)
 
+# Load integration modules and register handlers
+load_all_modules()
+register_all()
+
 app = FastAPI()
 queue.init()
+
+from app.scheduler import init_schedules
+
 init_schedules(app)
 
 for _w in safety_warnings:
