@@ -584,3 +584,51 @@ Why `\x1e` instead of newlines: multi-line log messages (heredocs) need to pass 
 Scripts are defined inline in `config.yaml` under the `scripts:` section. There's no separate `scripts/` directory with `.sh` files.
 
 Why: a web UI is the eventual goal for editing scripts. Keeping them in config means the config file is the single source of truth. Shell code in YAML is ugly, but it's also easily parseable and validatable by the config system. A future web UI will provide a better editing experience.
+
+---
+
+## Web UI
+
+See `docs/architecture/web-ui.md` for the full research and architecture document.
+
+### No built-in authentication
+
+GaaS does not implement authentication or user management. The web UI is open by default.
+
+GaaS is a personal assistant running on your own infrastructure. Adding auth creates maintenance burden, dependency surface area, and configuration complexity that's disproportionate to the threat model. A personal tool running on localhost doesn't need a user database.
+
+Users who need access control should use infrastructure-level solutions: reverse proxy with basic auth (Caddy, nginx), VPN/tailnet (Tailscale, WireGuard), or firewall rules. This is the same model Home Assistant used before HASS.io, Grafana in local mode, and Prometheus.
+
+Two safety measures exist regardless: the UI binds to `127.0.0.1` by default (not `0.0.0.0`) to prevent accidental network exposure, and `!secret` values are never displayed in plaintext. Mutating endpoints require explicit confirmation for destructive operations.
+
+### YAML stays as source of truth, UI is a peer
+
+The UI reads config from `config.yaml` and writes back to it. The YAML file is the source of truth. The UI is a convenience layer on top, not a replacement.
+
+This was a deliberate rejection of Home Assistant's approach where Config Flow replaced YAML for most integrations. HA's ADR-0010 caused significant community friction: power users lost version control, bulk editing, and diffing. We looked at Grafana's model instead, where file-provisioned content is displayed in the UI without being "owned" by it.
+
+The tradeoff: we need to solve YAML round-tripping (preserving comments and formatting when the UI writes back). `ruamel.yaml` handles this. PyYAML (current dependency) strips comments. The round-trip problem doesn't exist in Phase 1 (read-only viewer) which is another reason to ship that first.
+
+### Phased delivery: read-only first, editing later
+
+Phase 1 is a config viewer. Phase 2 adds editing for flat sections. Phase 3 adds complex editing and onboarding.
+
+Starting read-only follows Grafana's pattern and matches GaaS's trust principles. A viewer carries zero risk of mangling user files. It validates the template structure before any file mutation code exists. Each phase is independently shippable and useful.
+
+The alternative was building editing from the start. We rejected that because it front-loads the hardest problems (YAML round-tripping, complex nested form state, validation) before the basic UI framework is proven.
+
+### HTMX + Alpine.js + DaisyUI, not an SPA
+
+The frontend uses HTMX for page structure and data loading, Alpine.js for client-side form state in complex sections, and DaisyUI (Tailwind component library) for styling. No React, no Vue, no JavaScript build step.
+
+We evaluated three approaches. Pure HTMX works for flat config but requires a server round-trip and dedicated partial template for every form interaction in nested structures. Estimate: 15-20 partials just for the automation rule editor. A full SPA (React with react-jsonschema-form) produces the best form-editing UX but requires Node.js, npm, a bundler, two test suites, and ongoing JS ecosystem maintenance. That's disproportionate for a config editor maintained by Python developers.
+
+HTMX + Alpine.js is the middle ground. HTMX handles navigation and data persistence. Alpine handles in-flight form editing (add/remove automation rules, conditional fields, dynamic lists) without server round-trips. DaisyUI provides the collapse/accordion/tabs components that nested config editing needs. Everything loads from CDN or is vendored as static files. All server-side logic stays in Python.
+
+### `ruamel.yaml` for round-trip editing
+
+When Phase 2 lands, `ruamel.yaml` replaces PyYAML for config writing (not reading, which stays on PyYAML for now). `ruamel.yaml` preserves comments, key ordering, block style, and quoting when modifying and re-serializing YAML.
+
+Gotchas we're aware of: must use `typ='rt'` mode (without it, comments are silently dropped). The C extension kills comment preservation. Deleting list elements can orphan adjacent comments. No stable public API for comment manipulation. Prefer modifying values in-place over delete-and-recreate.
+
+StrictYAML was considered but rejects custom YAML tags (`!secret`, `!yolo`). That's a dealbreaker.

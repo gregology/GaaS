@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "components/_config.html" import render_fields, render_classification, render_automation, render_script %}
+{% block title %}GaaS — Config{% endblock %}
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-4">LLM Profiles</h2>
+<div class="overflow-x-auto mb-8">
+  <table class="table table-zebra">
+    <thead>
+      <tr><th>Name</th><th>Base URL</th><th>Model</th><th>Token</th><th>Parameters</th></tr>
+    </thead>
+    <tbody>
+      {% for profile in llm_profiles %}
+      <tr>
+        <td class="font-mono font-semibold">{{ profile.name }}</td>
+        <td class="text-sm">{{ profile.base_url }}</td>
+        <td class="text-sm font-mono">{{ profile.model }}</td>
+        <td class="text-sm">{{ profile.token or "—" }}</td>
+        <td class="text-sm">{{ profile.parameters or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 class="text-2xl font-bold mb-4">Integrations</h2>
+{% for integration in integrations %}
+<div class="collapse collapse-arrow bg-base-100 shadow mb-4">
+  <input type="checkbox" />
+  <div class="collapse-title">
+    <span class="font-semibold text-lg">{{ integration.name }}</span>
+    <span class="badge badge-outline badge-sm ml-2">{{ integration.type }}</span>
+    <span class="text-sm opacity-70 ml-2">{{ integration.id }}</span>
+    {% if integration.schedule %}
+    <span class="text-sm opacity-70 ml-2">({{ integration.schedule }})</span>
+    {% endif %}
+  </div>
+  <div class="collapse-content">
+    <p class="text-sm mb-2"><span class="font-semibold">LLM:</span> {{ integration.llm_profile }}</p>
+
+    {% if integration.fields %}
+    <h4 class="font-semibold mt-3 mb-1">Fields</h4>
+    {{ render_fields(integration.fields) }}
+    {% endif %}
+
+    {% for platform in integration.platforms %}
+    <div class="card bg-base-200 mt-4 p-4">
+      <h4 class="font-semibold text-md mb-2">
+        Platform: <span class="font-mono">{{ platform.name }}</span>
+      </h4>
+
+      {% if platform.fields %}
+      <h5 class="font-semibold text-sm mt-2 mb-1">Fields</h5>
+      {{ render_fields(platform.fields) }}
+      {% endif %}
+
+      {% if platform.classifications %}
+      <h5 class="font-semibold text-sm mt-3 mb-1">Classifications</h5>
+      {% for cls in platform.classifications %}
+      {{ render_classification(cls) }}
+      {% endfor %}
+      {% endif %}
+
+      {% if platform.automations %}
+      <h5 class="font-semibold text-sm mt-3 mb-1">Automations</h5>
+      {% for auto in platform.automations %}
+      {{ render_automation(auto) }}
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% if scripts %}
+<h2 class="text-2xl font-bold mb-4">Scripts</h2>
+{% for script in scripts %}
+{{ render_script(script) }}
+{% endfor %}
+{% endif %}
+
+<h2 class="text-2xl font-bold mb-4 mt-8">Directories</h2>
+<div class="overflow-x-auto mb-8">
+  <table class="table table-zebra">
+    <thead><tr><th>Directory</th><th>Path</th></tr></thead>
+    <tbody>
+      {% for name, path in directories.items() %}
+      {% if path %}
+      <tr><td class="font-mono">{{ name }}</td><td class="text-sm">{{ path }}</td></tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

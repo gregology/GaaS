@@ -7,6 +7,7 @@ from app import queue
 from app.config import config, safety_warnings
 from app.loader import load_all_modules
 from app.integrations import ENTRY_TASKS, register_all
+from app.ui import router as ui_router
 
 _log = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ load_all_modules()
 register_all()
 
 app = FastAPI()
+app.include_router(ui_router)
 queue.init()
 
 from app.scheduler import init_schedules

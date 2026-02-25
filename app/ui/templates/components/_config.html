@@ -1,0 +1,73 @@
+{% from "components/_badges.html" import provenance_badge, yolo_badge, reversibility_badge %}
+
+{% macro render_fields(fields) %}
+{% if fields %}
+<table class="table table-sm table-zebra">
+  <thead><tr><th>Field</th><th>Value</th></tr></thead>
+  <tbody>
+    {% for name, value in fields.items() %}
+    <tr><td class="font-mono text-sm">{{ name }}</td><td class="text-sm">{{ value }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endmacro %}
+
+{% macro render_classification(cls) %}
+<div class="flex items-center gap-2 py-1">
+  <span class="font-mono text-sm font-semibold">{{ cls.name }}</span>
+  <span class="badge badge-outline badge-sm">{{ cls.type }}</span>
+  {% if cls.values %}
+  <span class="text-xs opacity-70">[{{ cls.values | join(", ") }}]</span>
+  {% endif %}
+</div>
+<p class="text-sm opacity-80 ml-4">{{ cls.prompt }}</p>
+{% endmacro %}
+
+{% macro render_automation(auto) %}
+<div class="card bg-base-200 p-3 my-2">
+  <div class="flex items-center gap-2 mb-2">
+    <span class="font-semibold text-sm">when:</span>
+    {{ provenance_badge(auto.provenance) }}
+    {% if auto.yolo %}{{ yolo_badge() }}{% endif %}
+  </div>
+  <div class="ml-4">
+    {% for key, val in auto.when.items() %}
+    <div class="font-mono text-xs">{{ key }}: {{ val }}</div>
+    {% endfor %}
+  </div>
+  <div class="mt-2">
+    <span class="font-semibold text-sm">then:</span>
+    <div class="ml-4">
+      {% for action in auto.then %}
+      <div class="font-mono text-xs">{{ action }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro render_script(script) %}
+<div class="collapse collapse-arrow bg-base-200 my-2">
+  <input type="checkbox" />
+  <div class="collapse-title">
+    <div class="flex items-center gap-2">
+      <span class="font-mono font-semibold">{{ script.name }}</span>
+      {{ reversibility_badge(script.reversible) }}
+      {% if script.description %}
+      <span class="text-sm opacity-70">{{ script.description }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="collapse-content">
+    {% if script.inputs %}
+    <p class="text-sm"><span class="font-semibold">Inputs:</span> {{ script.inputs | join(", ") }}</p>
+    {% endif %}
+    <p class="text-sm"><span class="font-semibold">Timeout:</span> {{ script.timeout }}s</p>
+    {% if script.output %}
+    <p class="text-sm"><span class="font-semibold">Output:</span> {{ script.output }} ({{ script.on_output }})</p>
+    {% endif %}
+    <pre class="bg-base-300 p-3 rounded mt-2 text-xs overflow-x-auto"><code>{{ script.shell }}</code></pre>
+  </div>
+</div>
+{% endmacro %}

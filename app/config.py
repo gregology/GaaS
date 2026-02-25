@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _PROJECT_ROOT / "config.yaml"
-_SECRETS_PATH = _PROJECT_ROOT / "secrets.yaml"
+SECRETS_PATH = _PROJECT_ROOT / "secrets.yaml"
 
 _secrets_cache: dict[str, Any] | None = None
 
@@ -19,8 +19,8 @@ _secrets_cache: dict[str, Any] | None = None
 def _load_secrets() -> dict[str, Any]:
     global _secrets_cache
     if _secrets_cache is None:
-        if _SECRETS_PATH.exists():
-            _secrets_cache = yaml.safe_load(_SECRETS_PATH.read_text()) or {}
+        if SECRETS_PATH.exists():
+            _secrets_cache = yaml.safe_load(SECRETS_PATH.read_text()) or {}
         else:
             _secrets_cache = {}
     return _secrets_cache
@@ -31,7 +31,7 @@ def _secret_constructor(loader: yaml.SafeLoader, node: yaml.ScalarNode) -> str:
     secrets = _load_secrets()
     if key not in secrets:
         raise ValueError(
-            f"Secret '{key}' not found in {_SECRETS_PATH}. "
+            f"Secret '{key}' not found in {SECRETS_PATH}. "
             f"Available secrets: {list(secrets.keys())}"
         )
     return secrets[key]
@@ -108,7 +108,7 @@ def resolve_provenance(when: dict[str, Any], deterministic_sources: frozenset[st
     return "rule"
 
 
-def _load_platform_const(integration_type: str, platform_name: str):
+def load_platform_const(integration_type: str, platform_name: str):
     """Dynamically load a platform's const module, or None if absent.
 
     Uses the loader's manifest registry to find the integration, then loads
@@ -435,7 +435,7 @@ def _validate_automation_safety(
             if platform is None or not hasattr(platform, "automations"):
                 continue
 
-            const = _load_platform_const(integration.type, platform_name)
+            const = load_platform_const(integration.type, platform_name)
             deterministic_sources = getattr(const, "DETERMINISTIC_SOURCES", frozenset())
             irreversible_actions = getattr(const, "IRREVERSIBLE_ACTIONS", frozenset())
             warnings.extend(_filter_platform_automations(
