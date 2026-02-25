@@ -3,8 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+import time
 
 log = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+BACKOFF_BASE = 1  # seconds; sleeps 1, 2, 4 on retries
 
 
 class GitHubClient:
@@ -44,14 +48,9 @@ class GitHubClient:
             "--method", "GET",
             "-H", "Accept: application/vnd.github.v3.diff",
         ]
-        log.info("gh api: %s", " ".join(cmd))
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if proc.returncode != 0:
-            log.error("gh api failed: %s", proc.stderr)
-            raise RuntimeError(f"gh api failed (exit {proc.returncode}): {proc.stderr.strip()}")
-        return proc.stdout
+        return self._run_gh(cmd, timeout=60)
 
-    def active_prs(self, integration) -> list[dict]:
+    def active_prs(self, integration, platform) -> list[dict]:
         """Fetch all open PRs currently requiring the user's attention.
 
         Queries GitHub for PRs where the user is an assignee, requested reviewer,
@@ -67,7 +66,7 @@ class GitHubClient:
             "is:pr is:open review-requested:@me",
             "is:pr is:open author:@me draft:false",
         ]
-        if integration.include_mentions:
+        if getattr(platform, "include_mentions", False):
             base_queries.append("is:pr is:open mentions:@me")
 
         scopes = self._scope_qualifiers(integration)
@@ -97,6 +96,88 @@ class GitHubClient:
             qualifiers.append(f"repo:{repo}")
         return qualifiers or [""]
 
+    def get_issue(self, org: str, repo: str, number: int) -> dict:
+        result = self._gh_api(f"repos/{org}/{repo}/issues/{number}")
+        return {
+            "org": org,
+            "repo": repo,
+            "number": number,
+            "title": result.get("title", ""),
+            "author": result.get("user", {}).get("login", ""),
+            "state": result.get("state", "unknown"),
+            "labels": [l.get("name", "") for l in result.get("labels", [])],
+        }
+
+    def get_issue_detail(self, org: str, repo: str, number: int) -> dict:
+        result = self._gh_api(f"repos/{org}/{repo}/issues/{number}")
+        return {
+            "title": result.get("title", ""),
+            "body": result.get("body", "") or "",
+            "author": result.get("user", {}).get("login", ""),
+            "state": result.get("state", "unknown"),
+            "labels": [l.get("name", "") for l in result.get("labels", [])],
+            "comment_count": result.get("comments", 0),
+        }
+
+    def active_issues(self, integration, platform) -> list[dict]:
+        """Fetch all open issues currently requiring the user's attention.
+
+        Queries GitHub for issues where the user is an assignee or author.
+        Optionally includes issues that mention the user. Results are filtered
+        to the configured orgs/repos and deduplicated across query types.
+        """
+        seen: set[tuple[str, str, int]] = set()
+        results: list[dict] = []
+
+        base_queries = [
+            "is:issue is:open assignee:@me",
+            "is:issue is:open author:@me",
+        ]
+        if getattr(platform, "include_mentions", False):
+            base_queries.append("is:issue is:open mentions:@me")
+
+        scopes = self._scope_qualifiers(integration)
+        for base_query in base_queries:
+            for scope in scopes:
+                query = f"{base_query} {scope}".strip()
+                for item in self._search_issues(query):
+                    key = (item["org"], item["repo"], item["number"])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(item)
+
+        log.info("active_issues: found %d unique issues across all queries", len(results))
+        return results
+
+    def _search_issues(self, query: str) -> list[dict]:
+        """Execute a GitHub search/issues query and return parsed issue dicts.
+
+        Filters out pull requests (GitHub search/issues returns both).
+        """
+        result = self._gh_api(
+            "search/issues",
+            params={"q": query, "per_page": "100"},
+        )
+        issues = []
+        for item in result.get("items", []):
+            # GitHub search/issues endpoint returns PRs too — filter them out
+            if "pull_request" in item:
+                continue
+            repo_url = item.get("repository_url", "")
+            segments = repo_url.rstrip("/").split("/")
+            if len(segments) < 2:
+                log.warning("Cannot parse org/repo from repository_url: %s", repo_url)
+                continue
+            issues.append({
+                "org": segments[-2],
+                "repo": segments[-1],
+                "number": item["number"],
+                "title": item["title"],
+                "author": item.get("user", {}).get("login", ""),
+            })
+        log.info("_search_issues(%r): found %d issues", query, len(issues))
+        return issues
+
     def _search_prs(self, query: str) -> list[dict]:
         """Execute a GitHub search/issues query and return parsed PR dicts."""
         result = self._gh_api(
@@ -124,9 +205,26 @@ class GitHubClient:
         cmd = ["gh", "api", endpoint, "--method", method]
         for key, value in (params or {}).items():
             cmd.extend(["-f", f"{key}={value}"])
-        log.info("gh api: %s", " ".join(cmd))
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if proc.returncode != 0:
-            log.error("gh api failed: %s", proc.stderr)
-            raise RuntimeError(f"gh api failed (exit {proc.returncode}): {proc.stderr.strip()}")
-        return json.loads(proc.stdout)
+        return json.loads(self._run_gh(cmd, timeout=30))
+
+    def _run_gh(self, cmd: list[str], *, timeout: int = 30) -> str:
+        """Run a gh CLI command with retry and exponential backoff."""
+        last_err: RuntimeError | None = None
+        for attempt in range(MAX_RETRIES + 1):
+            log.info("gh api: %s", " ".join(cmd))
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if proc.returncode == 0:
+                return proc.stdout
+            last_err = RuntimeError(
+                f"gh api failed (exit {proc.returncode}): {proc.stderr.strip()}"
+            )
+            if attempt < MAX_RETRIES:
+                delay = BACKOFF_BASE * (2 ** attempt)
+                log.warning(
+                    "gh api failed (attempt %d/%d), retrying in %ds: %s",
+                    attempt + 1, MAX_RETRIES + 1, delay, proc.stderr.strip(),
+                )
+                time.sleep(delay)
+            else:
+                log.error("gh api failed: %s", proc.stderr.strip())
+        raise last_err

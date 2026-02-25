@@ -3,7 +3,8 @@ import time
 
 import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
-from app.integrations import HANDLERS
+from app.loader import load_all_modules
+from app.integrations import HANDLERS, register_all
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +21,10 @@ def handle(task: dict):
 
 
 def main():
+    # Load integration modules and register handlers
+    load_all_modules()
+    register_all()
+
     queue.init()
     log.info("Worker started, polling every %ss", POLL_INTERVAL)
 

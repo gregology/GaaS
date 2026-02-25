@@ -1,0 +1,30 @@
+domain: email
+name: "Email (IMAP)"
+version: "1.0.0"
+entry_task: check
+dependencies: []
+config_schema:
+  properties:
+    imap_server:
+      type: string
+    imap_port:
+      type: integer
+      default: 993
+    username:
+      type: string
+    password:
+      type: string
+  required:
+    - imap_server
+    - username
+    - password
+platforms:
+  inbox:
+    name: "Inbox"
+    entry_task: check
+    config_schema:
+      properties:
+        limit:
+          type: integer
+          default: 50
+      required: []

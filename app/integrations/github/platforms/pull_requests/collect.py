@@ -4,19 +4,20 @@ import logging
 
 from app import queue
 from app.config import config
-from .client import GitHubClient
 from .store import PullRequestStore
 
 log = logging.getLogger(__name__)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "github")
+    from ...client import GitHubClient
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.collect: %s/%s#%d (integration=%s)", org, repo, number, integration_name)
+    log.info("github.pull_requests.collect: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
 
     client = GitHubClient()
     pr = client.get_pr(org, repo, number)
@@ -37,7 +38,7 @@ def handle(task: dict):
             deletions=detail["deletions"],
             changed_files=detail["changed_files"],
         )
-        log.info("github.collect: updated %s/%s#%d", org, repo, number)
+        log.info("github.pull_requests.collect: updated %s/%s#%d", org, repo, number)
     else:
         store.save({
             "org": org,
@@ -49,14 +50,13 @@ def handle(task: dict):
             "deletions": detail["deletions"],
             "changed_files": detail["changed_files"],
         })
-        log.info("github.collect: saved new PR %s/%s#%d", org, repo, number)
-        log.human("Discovered PR **%s/%s#%d** — %s", org, repo, number, pr["title"])
+        log.info("github.pull_requests.collect: saved new PR %s/%s#%d", org, repo, number)
 
     queue.enqueue({
-        "type": "github.classify_pr",
-        "integration": integration_name,
+        "type": "github.pull_requests.classify",
+        "integration": integration_id,
         "org": org,
         "repo": repo,
         "number": number,
     }, priority=6)
-    log.info("github.collect: queued github.classify_pr for %s/%s#%d", org, repo, number)
+    log.info("github.pull_requests.collect: queued classify for %s/%s#%d", org, repo, number)

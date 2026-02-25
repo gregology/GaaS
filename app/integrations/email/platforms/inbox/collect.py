@@ -2,17 +2,18 @@ import logging
 
 from app import queue
 from app.config import config
-from .mail import Mailbox
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
+    from ...mail import Mailbox
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
     uid = task["payload"]["uid"]
-    log.info("email.collect: uid=%s (integration=%s)", uid, integration_name)
+    log.info("email.inbox.collect: uid=%s (integration=%s)", uid, integration_id)
 
     with Mailbox(
         imap_server=integration.imap_server,
@@ -28,15 +29,15 @@ def handle(task: dict):
 
     if store.find_by_message_id(message_id):
         store.update_mutable(message_id, email)
-        log.info("email.collect: updated mutable fields for uid=%s", uid)
+        log.info("email.inbox.collect: updated mutable fields for uid=%s", uid)
     else:
         store.save(email)
-        log.info("email.collect: saved new email uid=%s", uid)
+        log.info("email.inbox.collect: saved new email uid=%s", uid)
 
     priority = 6 if all(email.authentication.values()) else 9
     queue.enqueue({
-        "type": "email.classify",
-        "integration": integration_name,
+        "type": "email.inbox.classify",
+        "integration": integration_id,
         "uid": uid,
     }, priority=priority)
-    log.info("email.collect: queued email.classify for uid=%s", uid)
+    log.info("email.inbox.collect: queued classify for uid=%s", uid)

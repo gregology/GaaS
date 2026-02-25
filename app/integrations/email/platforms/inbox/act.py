@@ -2,7 +2,6 @@ import logging
 
 from app.config import config
 from .const import SIMPLE_ACTIONS
-from .mail import Mailbox
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
@@ -14,7 +13,7 @@ _FOLDER_MOVES: frozenset[str] = frozenset({"archive", "spam", "trash"})
 def _execute_action(email, action) -> None:
     if isinstance(action, str):
         if action not in SIMPLE_ACTIONS:
-            log.warning("email.act: unknown action %r, skipping", action)
+            log.warning("email.inbox.act: unknown action %r, skipping", action)
             return
         getattr(email, action)()
     elif isinstance(action, dict):
@@ -23,18 +22,20 @@ def _execute_action(email, action) -> None:
         elif "move_to" in action:
             email.move_to(action["move_to"])
         else:
-            log.warning("email.act: unknown action dict %r, skipping", action)
+            log.warning("email.inbox.act: unknown action dict %r, skipping", action)
 
 
 def handle(task: dict):
-    integration_name = task["payload"]["integration"]
-    integration = config.get_integration(integration_name, "email")
+    from ...mail import Mailbox
+
+    integration_id = task["payload"]["integration"]
+    integration = config.get_integration(integration_id)
     uid = task["payload"]["uid"]
     actions = task["payload"]["actions"]
     provenance = task.get("provenance", "unknown")
     log.info(
-        "email.act: uid=%s actions=%s provenance=%s (integration=%s)",
-        uid, actions, provenance, integration_name,
+        "email.inbox.act: uid=%s actions=%s provenance=%s (integration=%s)",
+        uid, actions, provenance, integration_id,
     )
 
     notes_dir = config.directories.notes
