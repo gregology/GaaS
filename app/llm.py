@@ -89,7 +89,8 @@ class LLMBackend(Protocol):
     ) -> LLMResponse: ...
 
 
-class LlamaCppBackend:
+class ChatCompletionsBackend:
+    """Backend using the /v1/chat/completions endpoint format."""
     def __init__(
         self,
         base_url: str | None = None,
@@ -179,7 +180,7 @@ class LLMConversation:
         self.model = llm_config.model
         self._parameters = llm_config.parameters
         self.messages = MessageList()
-        self._backend = backend or LlamaCppBackend(
+        self._backend = backend or ChatCompletionsBackend(
             base_url=llm_config.base_url,
             token=llm_config.token,
         )
