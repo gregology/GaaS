@@ -47,20 +47,29 @@ Useful for having an external trigger, testing your config, or debugging an inte
 
 ## Running the server
 
-Development server with auto-reload:
+The easiest way is the supervisor, which starts both the API server and the worker in one terminal:
 
 ```bash
-uv run fastapi dev
+uv run python -m app.supervisor --dev
 ```
 
-Production server:
+The server binds to `127.0.0.1:6767` by default. If you want to hit the API from another machine on your network (a phone, a Raspberry Pi, whatever), add `--expose`:
 
 ```bash
-uv run fastapi run
+uv run python -m app.supervisor --dev --expose
 ```
 
-The worker must run in a separate terminal for tasks to actually be processed:
+That binds to `0.0.0.0` instead. You can also change the port:
 
 ```bash
-uv run python -m app.worker
+uv run python -m app.supervisor --port 8080
 ```
+
+Or run the server and worker separately if you prefer:
+
+```bash
+uv run fastapi dev             # Dev server (auto-reload)
+uv run python -m app.worker    # Task worker (separate terminal)
+```
+
+Note: `--expose` and `--port` are supervisor flags. When running `fastapi dev` directly, pass `--host` and `--port` to uvicorn yourself.
