@@ -36,14 +36,14 @@ NC='\033[0m' # No Color
 
 # ─── Output helpers ───────────────────────────────────────────────────────────
 
-info()    { printf "${BLUE}::${NC} %s\n" "$*"; }
-success() { printf "${GREEN}✓${NC} %s\n" "$*"; }
-warn()    { printf "${YELLOW}!${NC} %s\n" "$*"; }
-error()   { printf "${RED}✗${NC} %s\n" "$*" >&2; }
+info()    { printf "%b::%b %s\n" "${BLUE}" "${NC}" "$*"; }
+success() { printf "%b✓%b %s\n" "${GREEN}" "${NC}" "$*"; }
+warn()    { printf "%b!%b %s\n" "${YELLOW}" "${NC}" "$*"; }
+error()   { printf "%b✗%b %s\n" "${RED}" "${NC}" "$*" >&2; }
 fatal()   { error "$*"; exit 1; }
 
 banner() {
-    printf "${BOLD}${BLUE}"
+    printf "%b%b" "${BOLD}" "${BLUE}"
     cat << 'BANNER'
 
    ____              ____
@@ -55,7 +55,7 @@ banner() {
   Greg as a Service
 
 BANNER
-    printf "${NC}"
+    printf "%b" "${NC}"
 }
 
 # ─── Prerequisite checks ─────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ check_gh() {
         fi
     else
         warn "GitHub CLI not found (optional, needed for GitHub integration)"
-        printf "  ${DIM}Install: https://cli.github.com/${NC}\n"
+        printf "  %bInstall: https://cli.github.com/%b\n" "${DIM}" "${NC}"
     fi
 }
 
@@ -232,8 +232,8 @@ main() {
         exec gaas update
     fi
 
-    printf "${DIM}  Installing to: $GAAS_HOME${NC}\n"
-    printf "${DIM}  CLI wrapper:   $WRAPPER${NC}\n\n"
+    printf "%b  Installing to: %s%b\n" "${DIM}" "$GAAS_HOME" "${NC}"
+    printf "%b  CLI wrapper:   %s%b\n\n" "${DIM}" "$WRAPPER" "${NC}"
 
     # ── Prerequisites ──
     info "Checking prerequisites..."
@@ -266,11 +266,11 @@ main() {
 
     # ── Done ──
     printf "\n"
-    printf "${GREEN}${BOLD}  GaaS installed successfully!${NC}\n"
+    printf "%b%b  GaaS installed successfully!%b\n" "${GREEN}" "${BOLD}" "${NC}"
     printf "\n"
-    info "Run ${BOLD}gaas setup${NC} to configure your installation."
-    info "Run ${BOLD}gaas doctor${NC} to verify everything is working."
-    info "Run ${BOLD}gaas start${NC}  to start the server."
+    info "Run %bgaas setup%b to configure your installation." "${BOLD}" "${NC}"
+    info "Run %bgaas doctor%b to verify everything is working." "${BOLD}" "${NC}"
+    info "Run %bgaas start%b  to start the server." "${BOLD}" "${NC}"
     printf "\n"
 
     # Offer to run setup now, reconnecting stdin to the terminal
