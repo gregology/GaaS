@@ -1,0 +1,21 @@
+{% macro provenance_badge(provenance) %}
+{% if provenance == "rule" %}
+<span class="badge badge-success badge-sm">rule</span>
+{% elif provenance == "llm" %}
+<span class="badge badge-warning badge-sm">llm</span>
+{% elif provenance == "hybrid" %}
+<span class="badge badge-info badge-sm">hybrid</span>
+{% endif %}
+{% endmacro %}
+
+{% macro yolo_badge() %}
+<span class="badge badge-error badge-sm">!yolo</span>
+{% endmacro %}
+
+{% macro reversibility_badge(reversible) %}
+{% if reversible %}
+<span class="badge badge-success badge-sm">reversible</span>
+{% else %}
+<span class="badge badge-warning badge-sm">irreversible</span>
+{% endif %}
+{% endmacro %}

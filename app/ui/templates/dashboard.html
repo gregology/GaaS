@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}GaaS — Dashboard{% endblock %}
+{% block content %}
+
+{% if safety_warnings %}
+<div class="mb-6">
+  {% for warning in safety_warnings %}
+  <div class="alert alert-warning mb-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+    <span class="text-sm">{{ warning }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="text-2xl font-bold mb-4">Integrations</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+  {% for integration in integrations %}
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h3 class="card-title text-lg">
+        {{ integration.name }}
+        <span class="badge badge-outline badge-sm">{{ integration.type }}</span>
+      </h3>
+      <p class="text-sm font-mono opacity-70">{{ integration.id }}</p>
+      {% if integration.schedule %}
+      <p class="text-sm">{{ integration.schedule }}</p>
+      {% endif %}
+      <p class="text-sm">LLM: {{ integration.llm_profile }}</p>
+      {% if integration.platforms %}
+      <div class="flex gap-1 mt-1">
+        {% for platform in integration.platforms %}
+        <span class="badge badge-neutral badge-sm">{{ platform.name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2 class="text-2xl font-bold mb-4">Queue</h2>
+<div class="stats shadow mb-8">
+  <div class="stat">
+    <div class="stat-title">Pending</div>
+    <div class="stat-value text-warning">{{ queue.pending }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Active</div>
+    <div class="stat-value text-info">{{ queue.active }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Done</div>
+    <div class="stat-value text-success">{{ queue.done }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Failed</div>
+    <div class="stat-value text-error">{{ queue.failed }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Total</div>
+    <div class="stat-value">{{ queue.total }}</div>
+  </div>
+</div>
+
+{% if recent_logs %}
+<h2 class="text-2xl font-bold mb-4">Recent Logs</h2>
+<ul class="menu bg-base-100 rounded-box shadow">
+  {% for log in recent_logs %}
+  <li><a href="/ui/logs/{{ log.date }}">{{ log.date }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

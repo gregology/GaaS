@@ -130,7 +130,9 @@ celerybeat.pid
 # Environments
 .env
 config.yaml
+config.yaml.bak
 config.yml
+config.yml.bak
 secrets.yaml
 .venv
 env/
@@ -203,3 +205,6 @@ cron_state.db*
 
 # Complexipy
 .complexipy_cache
+
+# Supervisor restart sentinel
+.gaas-restart

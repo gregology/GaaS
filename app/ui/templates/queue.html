@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}GaaS — Queue{% endblock %}
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-4">Task Queue</h2>
+
+<div class="stats shadow mb-8">
+  <div class="stat">
+    <div class="stat-title">Pending</div>
+    <div class="stat-value text-warning">{{ counts.pending }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Active</div>
+    <div class="stat-value text-info">{{ counts.active }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Done</div>
+    <div class="stat-value text-success">{{ counts.done }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Failed</div>
+    <div class="stat-value text-error">{{ counts.failed }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Total</div>
+    <div class="stat-value">{{ counts.total }}</div>
+  </div>
+</div>
+
+<div role="tablist" class="tabs tabs-boxed mb-4">
+  {% for dir_name in tasks.keys() %}
+  <input type="radio" name="queue_tabs" role="tab" class="tab" aria-label="{{ dir_name }}" {% if loop.first %}checked{% endif %} />
+  <div role="tabpanel" class="tab-content p-4">
+    {% if tasks[dir_name] %}
+    <div class="overflow-x-auto">
+      <table class="table table-sm table-zebra">
+        <thead>
+          <tr><th>ID</th><th>Type</th><th>Created</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for task in tasks[dir_name] %}
+          <tr>
+            <td class="font-mono text-xs">{{ task.id }}</td>
+            <td class="text-sm">{{ task.task_type }}</td>
+            <td class="text-sm">{{ task.created_at }}</td>
+            <td><span class="badge badge-sm">{{ task.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm opacity-70">No tasks in {{ dir_name }}.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% from "components/_config.html" import render_directory_form %}
+
+<div class="flex items-center gap-3 mb-4 mt-8">
+  <h2 class="text-2xl font-bold">Directories</h2>
+  <button class="btn btn-ghost btn-xs" @click="editing = !editing">Edit</button>
+</div>
+
+<div x-show="editing" x-cloak>
+  {{ render_directory_form(directories) }}
+</div>
+
+<div x-show="!editing" class="overflow-x-auto mb-8">
+  <table class="table table-zebra">
+    <thead><tr><th>Directory</th><th>Path</th></tr></thead>
+    <tbody>
+      {% for name, path in directories.items() %}
+      {% if path %}
+      <tr><td class="font-mono">{{ name }}</td><td class="text-sm">{{ path }}</td></tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

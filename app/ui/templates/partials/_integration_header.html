@@ -1,0 +1,12 @@
+{% from "components/_config.html" import render_integration_settings_form %}
+
+<div class="flex items-center gap-2 mb-2">
+  <p class="text-sm"><span class="font-semibold">LLM:</span> {{ integration.llm_profile }}</p>
+  {% if integration.schedule %}
+  <p class="text-sm ml-4"><span class="font-semibold">Schedule:</span> {{ integration.schedule }}</p>
+  {% endif %}
+  <button class="btn btn-ghost btn-xs ml-2" @click="editing = !editing">Edit</button>
+</div>
+<div x-show="editing" x-cloak>
+  {{ render_integration_settings_form(integration, llm_names, index) }}
+</div>

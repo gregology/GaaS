@@ -528,3 +528,107 @@ Parses `.ics` attachments. Extracts method, sequence, attendees, start/end times
 ### `fastapi-crons` for scheduling
 
 Runs cron jobs inside the FastAPI process. Avoids a separate scheduler process or dependency on system cron. The `interval_to_cron()` helper converts friendly syntax (`every: 30m`) to cron expressions for this library.
+
+---
+
+## Shared Action Layer
+
+### Scripts as a cross-cutting action type, not per-platform
+
+Scripts can be triggered from any integration's automations (email, GitHub, etc.). Rather than adding script awareness to every platform's `act.py` or `evaluate.py`, there's a shared action layer in `app/actions/` where the evaluate phase partitions actions into platform-specific and shared actions.
+
+Three alternatives were considered. Adding a `_handle_script` function to every platform's `act.py` would mean script logic duplicated across every platform. Intercepting scripts in each platform's `evaluate.py` before the queue would couple evaluation to script execution. A middleware layer between the queue and handlers would add a new processing stage to understand.
+
+The chosen approach is cleaner: `enqueue_actions()` is called by each platform's evaluate handler. It splits the action list. Script actions become independent `script.run` queue tasks. Platform actions go to the platform's `act.py` as before. The evaluate handler doesn't need to know what a script does. The script handler doesn't need to know which platform triggered it.
+
+### Scripts are irreversible by default
+
+The system can't statically verify what shell code does. A script that `curl`s an external API is irreversible. A script that writes to a local file is probably reversible. Rather than guess, every script is treated as irreversible unless the author explicitly opts in with `reversible: true` on the script definition.
+
+This means script actions from `llm` or `hybrid` provenance are blocked at config load time (like `unsubscribe`) unless wrapped in `!yolo` or the script is marked `reversible: true`.
+
+### `!yolo` on YAML mappings
+
+The original `!yolo` tag only worked on scalars (`!yolo unsubscribe`). Script actions are dicts, not strings. The YAML constructor was extended to handle mapping nodes:
+
+```yaml
+- !yolo
+  script:
+    name: research_tos
+    inputs:
+      domain: $domain
+```
+
+`YoloAction.value` became `str | dict`. `__hash__` uses `repr(self.value)` for stable hashing of both types. This keeps the existing safety validation infrastructure working without special cases.
+
+### Input resolution at evaluate time, not execution time
+
+Script inputs use `$field` references (e.g., `$domain`) that are resolved against the automation context. This resolution happens in the evaluate phase, not in the script executor. The executor only receives fully resolved string values.
+
+Why: the evaluate phase has the snapshot context (email properties, classification results). The script executor runs later, potentially in a different worker process, and shouldn't need to reconstruct the snapshot. Resolving early also means the resolved values are visible in the queue task YAML, which helps debugging.
+
+### Separate queue tasks per script
+
+Each script action becomes its own `script.run` queue task. An automation that triggers two scripts and an archive produces three queue tasks: two `script.run` tasks and one platform act task.
+
+Why: scripts can be long-running. A 5-minute ToS research script shouldn't block a 100ms archive. Independent tasks also mean independent failure tracking. A failed script lands in `failed/` with its error while the platform action still completes.
+
+### Preamble-injected logging helpers
+
+Every script gets a bash preamble prepended with `log_human`, `log_info`, and `log_warn` functions. These write `LEVEL\tMESSAGE` records to a temp file (`$GAAS_LOG`) using `\x1e` (ASCII Record Separator) as the record delimiter.
+
+Why `\x1e` instead of newlines: multi-line log messages (heredocs) need to pass through cleanly. The Record Separator character never appears in natural text. After the script completes, the executor reads the file, splits on `\x1e`, and routes each record to the appropriate Python logger.
+
+### Config-only scripts, no `scripts/` directory
+
+Scripts are defined inline in `config.yaml` under the `scripts:` section. There's no separate `scripts/` directory with `.sh` files.
+
+Why: a web UI is the eventual goal for editing scripts. Keeping them in config means the config file is the single source of truth. Shell code in YAML is ugly, but it's also easily parseable and validatable by the config system. A future web UI will provide a better editing experience.
+
+---
+
+## Web UI
+
+See `docs/architecture/web-ui.md` for the full research and architecture document.
+
+### No built-in authentication
+
+GaaS does not implement authentication or user management. The web UI is open by default.
+
+GaaS is a personal assistant running on your own infrastructure. Adding auth creates maintenance burden, dependency surface area, and configuration complexity that's disproportionate to the threat model. A personal tool running on localhost doesn't need a user database.
+
+Users who need access control should use infrastructure-level solutions: reverse proxy with basic auth (Caddy, nginx), VPN/tailnet (Tailscale, WireGuard), or firewall rules. This is the same model Home Assistant used before HASS.io, Grafana in local mode, and Prometheus.
+
+Two safety measures exist regardless: the UI binds to `127.0.0.1` by default (not `0.0.0.0`) to prevent accidental network exposure, and `!secret` values are never displayed in plaintext. Mutating endpoints require explicit confirmation for destructive operations.
+
+### YAML stays as source of truth, UI is a peer
+
+The UI reads config from `config.yaml` and writes back to it. The YAML file is the source of truth. The UI is a convenience layer on top, not a replacement.
+
+This was a deliberate rejection of Home Assistant's approach where Config Flow replaced YAML for most integrations. HA's ADR-0010 caused significant community friction: power users lost version control, bulk editing, and diffing. We looked at Grafana's model instead, where file-provisioned content is displayed in the UI without being "owned" by it.
+
+The tradeoff: we need to solve YAML round-tripping (preserving comments and formatting when the UI writes back). `ruamel.yaml` handles this. PyYAML (current dependency) strips comments. The round-trip problem doesn't exist in Phase 1 (read-only viewer) which is another reason to ship that first.
+
+### Phased delivery: read-only first, editing later
+
+Phase 1 is a config viewer. Phase 2 adds editing for flat sections. Phase 3 adds complex editing and onboarding.
+
+Starting read-only follows Grafana's pattern and matches GaaS's trust principles. A viewer carries zero risk of mangling user files. It validates the template structure before any file mutation code exists. Each phase is independently shippable and useful.
+
+The alternative was building editing from the start. We rejected that because it front-loads the hardest problems (YAML round-tripping, complex nested form state, validation) before the basic UI framework is proven.
+
+### HTMX + Alpine.js + DaisyUI, not an SPA
+
+The frontend uses HTMX for page structure and data loading, Alpine.js for client-side form state in complex sections, and DaisyUI (Tailwind component library) for styling. No React, no Vue, no JavaScript build step.
+
+We evaluated three approaches. Pure HTMX works for flat config but requires a server round-trip and dedicated partial template for every form interaction in nested structures. Estimate: 15-20 partials just for the automation rule editor. A full SPA (React with react-jsonschema-form) produces the best form-editing UX but requires Node.js, npm, a bundler, two test suites, and ongoing JS ecosystem maintenance. That's disproportionate for a config editor maintained by Python developers.
+
+HTMX + Alpine.js is the middle ground. HTMX handles navigation and data persistence. Alpine handles in-flight form editing (add/remove automation rules, conditional fields, dynamic lists) without server round-trips. DaisyUI provides the collapse/accordion/tabs components that nested config editing needs. Everything loads from CDN or is vendored as static files. All server-side logic stays in Python.
+
+### `ruamel.yaml` for round-trip editing
+
+When Phase 2 lands, `ruamel.yaml` replaces PyYAML for config writing (not reading, which stays on PyYAML for now). `ruamel.yaml` preserves comments, key ordering, block style, and quoting when modifying and re-serializing YAML.
+
+Gotchas we're aware of: must use `typ='rt'` mode (without it, comments are silently dropped). The C extension kills comment preservation. Deleting list elements can orphan adjacent comments. No stable public API for comment manipulation. Prefer modifying values in-place over delete-and-recreate.
+
+StrictYAML was considered but rejects custom YAML tags (`!secret`, `!yolo`). That's a dealbreaker.

@@ -70,26 +70,13 @@ Not all classification is equal. An email classified by an LLM is a probabilisti
 uv sync
 ```
 
-### Run server
+### Run
 
-Development server (auto-reload, localhost only):
-
-```bash
-uv run fastapi dev
-```
-
-Production server:
+The supervisor starts both the API server and task worker in a single terminal:
 
 ```bash
-uv run fastapi run
-```
-
-### Run worker
-
-The task queue worker polls for pending tasks and processes them. Run it in a separate terminal alongside the API server:
-
-```bash
-uv run python -m app.worker
+uv run python -m app.supervisor --dev   # Development (auto-reload)
+uv run python -m app.supervisor          # Production
 ```
 
 ### Run tests

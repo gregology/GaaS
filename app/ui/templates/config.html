@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "components/_config.html" import render_fields, render_classification, render_automation, render_script, render_integration_settings_form %}
+{% block title %}GaaS — Config{% endblock %}
+{% block content %}
+
+{# ------------------------------------------------------------------ #}
+{# LLM Profiles                                                       #}
+{# ------------------------------------------------------------------ #}
+
+<div id="llm-section" x-data="{ editing: null, adding: false }">
+  {% include "partials/_llm_section.html" %}
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Integrations                                                        #}
+{# ------------------------------------------------------------------ #}
+
+<h2 class="text-2xl font-bold mb-4">Integrations</h2>
+{% for integration in integrations %}
+<div class="collapse collapse-arrow bg-base-100 shadow mb-4">
+  <input type="checkbox" />
+  <div class="collapse-title">
+    <span class="font-semibold text-lg">{{ integration.name }}</span>
+    <span class="badge badge-outline badge-sm ml-2">{{ integration.type }}</span>
+    <span class="text-sm opacity-70 ml-2">{{ integration.id }}</span>
+    {% if integration.schedule %}
+    <span class="text-sm opacity-70 ml-2">({{ integration.schedule }})</span>
+    {% endif %}
+  </div>
+  <div class="collapse-content">
+    {% set index = loop.index0 %}
+    <div id="integration-{{ index }}-header" x-data="{ editing: false }">
+      {% include "partials/_integration_header.html" %}
+    </div>
+
+    {% if integration.fields %}
+    <h4 class="font-semibold mt-3 mb-1">Fields</h4>
+    {{ render_fields(integration.fields) }}
+    {% endif %}
+
+    {% for platform in integration.platforms %}
+    <div class="card bg-base-200 mt-4 p-4">
+      <h4 class="font-semibold text-md mb-2">
+        Platform: <span class="font-mono">{{ platform.name }}</span>
+      </h4>
+
+      {% if platform.fields %}
+      <h5 class="font-semibold text-sm mt-2 mb-1">Fields</h5>
+      {{ render_fields(platform.fields) }}
+      {% endif %}
+
+      {% if platform.classifications %}
+      <h5 class="font-semibold text-sm mt-3 mb-1">Classifications</h5>
+      {% for cls in platform.classifications %}
+      {{ render_classification(cls) }}
+      {% endfor %}
+      {% endif %}
+
+      {% if platform.automations %}
+      <h5 class="font-semibold text-sm mt-3 mb-1">Automations</h5>
+      {% for auto in platform.automations %}
+      {{ render_automation(auto) }}
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{# ------------------------------------------------------------------ #}
+{# Scripts                                                             #}
+{# ------------------------------------------------------------------ #}
+
+<div id="scripts-section" x-data="{ editing: null, adding: false }">
+  {% include "partials/_scripts_section.html" %}
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Directories                                                         #}
+{# ------------------------------------------------------------------ #}
+
+<div id="directories-section" x-data="{ editing: false }">
+  {% include "partials/_directories_section.html" %}
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Raw YAML Editor (escape hatch)                                     #}
+{# ------------------------------------------------------------------ #}
+
+<div class="collapse collapse-arrow bg-base-100 shadow mt-8 mb-8">
+  <input type="checkbox" />
+  <div class="collapse-title">
+    <h2 class="text-2xl font-bold">Raw YAML Editor</h2>
+    <p class="text-sm opacity-70">Edit config.yaml directly. Use this for !secret values and advanced edits.</p>
+  </div>
+  <div class="collapse-content">
+    <form hx-post="/ui/config/yaml" hx-target="#raw-yaml-result" hx-swap="innerHTML">
+      <textarea name="yaml_content" class="textarea textarea-bordered font-mono text-xs w-full" rows="20">{{ raw_yaml }}</textarea>
+      <div id="raw-yaml-result" class="mt-2"></div>
+      <div class="flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
