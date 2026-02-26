@@ -1,8 +1,10 @@
 """Process supervisor that manages the FastAPI server and worker as children.
 
 Usage:
-    uv run python -m app.supervisor          # Production
-    uv run python -m app.supervisor --dev    # Dev mode (uvicorn --reload)
+    uv run python -m app.supervisor                # Production
+    uv run python -m app.supervisor --dev          # Dev mode (uvicorn --reload)
+    uv run python -m app.supervisor --expose       # Allow external connections
+    uv run python -m app.supervisor --port 8080    # Custom port (default: 6767)
 
 Creates a .gaas-restart sentinel file mechanism: the UI writes the file,
 the supervisor detects it and restarts all children.
@@ -76,11 +78,15 @@ def _shutdown_handler(signum, frame):
 def main():
     parser = argparse.ArgumentParser(description="GaaS process supervisor")
     parser.add_argument("--dev", action="store_true", help="Enable uvicorn --reload")
+    parser.add_argument("--expose", action="store_true",
+                        help="Allow external connections (bind 0.0.0.0 instead of 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=6767, help="Port number (default: 6767)")
     args = parser.parse_args()
 
+    host = "0.0.0.0" if args.expose else "127.0.0.1"
     python = sys.executable
 
-    server_cmd = [python, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "6767"]
+    server_cmd = [python, "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(args.port)]
     if args.dev:
         server_cmd.append("--reload")
 
@@ -99,7 +105,7 @@ def main():
     for child in children:
         child.start()
 
-    log.info("Supervisor running (dev=%s). Press Ctrl+C to stop.", args.dev)
+    log.info("Supervisor running (dev=%s, host=%s, port=%d). Press Ctrl+C to stop.", args.dev, host, args.port)
 
     try:
         while not _shutting_down:

@@ -79,6 +79,19 @@ uv run python -m app.supervisor --dev   # Development (auto-reload)
 uv run python -m app.supervisor          # Production
 ```
 
+By default the server only listens on `localhost` (127.0.0.1). To access the UI or API from another device on your network, add `--expose`:
+
+```bash
+uv run python -m app.supervisor --dev --expose
+```
+
+You can also set a custom port (default is 6767):
+
+```bash
+uv run python -m app.supervisor --port 8080
+uv run python -m app.supervisor --dev --expose --port 8080
+```
+
 ### Run tests
 
 ```bash
