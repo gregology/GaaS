@@ -164,7 +164,7 @@ async def log_detail(date: str):
 @router.post("/system/restart", response_class=HTMLResponse)
 async def restart():
     _SENTINEL.touch()
-    log.human("Restart requested via UI")
+    log.info("Restart requested via UI")
     template = _env.get_template("restart.html")
     return HTMLResponse(template.render())
 
