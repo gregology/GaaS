@@ -205,3 +205,6 @@ cron_state.db*
 
 # Complexipy
 .complexipy_cache
+
+# Supervisor restart sentinel
+.gaas-restart

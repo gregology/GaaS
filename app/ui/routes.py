@@ -1,3 +1,5 @@
+import logging
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
@@ -30,6 +32,9 @@ from app.ui.yaml_rw import (
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _env = Environment(loader=FileSystemLoader(_TEMPLATE_DIR), autoescape=True)
+_SENTINEL = Path(__file__).resolve().parent.parent.parent / ".gaas-restart"
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ui")
 
@@ -37,6 +42,10 @@ router = APIRouter(prefix="/ui")
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _supervisor_active() -> bool:
+    return os.environ.get("GAAS_SUPERVISOR") == "1"
 
 
 def _render_error(error_msg: str) -> HTMLResponse:
@@ -104,19 +113,27 @@ def _parse_schedule(schedule_type: str, schedule_value: str) -> dict | None:
 @router.get("/", response_class=HTMLResponse)
 async def dashboard():
     template = _env.get_template("dashboard.html")
-    return template.render(**dashboard_context(), config_dirty=is_dirty())
+    return template.render(
+        **dashboard_context(),
+        config_dirty=is_dirty(),
+        supervisor_active=_supervisor_active(),
+    )
 
 
 @router.get("/config", response_class=HTMLResponse)
 async def config_page():
     template = _env.get_template("config.html")
-    return template.render(**config_context())
+    return template.render(**config_context(), supervisor_active=_supervisor_active())
 
 
 @router.get("/queue", response_class=HTMLResponse)
 async def queue_page():
     template = _env.get_template("queue.html")
-    return template.render(**queue_context(), config_dirty=is_dirty())
+    return template.render(
+        **queue_context(),
+        config_dirty=is_dirty(),
+        supervisor_active=_supervisor_active(),
+    )
 
 
 @router.get("/logs", response_class=HTMLResponse)
@@ -126,13 +143,30 @@ async def logs_page():
     ctx["date"] = None
     ctx["content"] = None
     ctx["config_dirty"] = is_dirty()
-    return template.render(**ctx)
+    return template.render(**ctx, supervisor_active=_supervisor_active())
 
 
 @router.get("/logs/{date}", response_class=HTMLResponse)
 async def log_detail(date: str):
     template = _env.get_template("logs.html")
-    return template.render(**log_detail_context(date), config_dirty=is_dirty())
+    return template.render(
+        **log_detail_context(date),
+        config_dirty=is_dirty(),
+        supervisor_active=_supervisor_active(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# System endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/system/restart", response_class=HTMLResponse)
+async def restart():
+    _SENTINEL.touch()
+    log.human("Restart requested via UI")
+    template = _env.get_template("restart.html")
+    return HTMLResponse(template.render())
 
 
 # ---------------------------------------------------------------------------
@@ -276,5 +310,13 @@ async def save_raw(request: Request):
     except ConfigValidationError as exc:
         return _render_error(str(exc))
 
-    success_html = '<div class="alert alert-success mb-4"><span>Config saved. Restart GaaS for changes to take effect.</span></div>'
+    if _supervisor_active():
+        success_html = (
+            '<div class="alert alert-success mb-4"><span>Config saved.</span>'
+            '<form method="POST" action="/ui/system/restart" class="inline">'
+            '<button type="submit" class="btn btn-sm btn-primary ml-2">Restart GaaS</button>'
+            '</form></div>'
+        )
+    else:
+        success_html = '<div class="alert alert-success mb-4"><span>Config saved. Restart GaaS for changes to take effect.</span></div>'
     return HTMLResponse(success_html)

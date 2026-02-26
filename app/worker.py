@@ -1,4 +1,5 @@
 import logging
+import signal
 import time
 
 import app.human_log  # noqa: F401 — registers log.human()
@@ -11,6 +12,14 @@ log = logging.getLogger(__name__)
 
 POLL_INTERVAL = 1  # seconds
 
+_shutting_down = False
+
+
+def _shutdown_handler(signum, frame):
+    global _shutting_down
+    _shutting_down = True
+    log.info("Received signal %s, shutting down gracefully…", signum)
+
 
 def handle(task: dict):
     task_type = task["payload"].get("type")
@@ -22,6 +31,9 @@ def handle(task: dict):
 
 
 def main():
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+    signal.signal(signal.SIGINT, _shutdown_handler)
+
     # Load integration modules and register handlers
     load_all_modules()
     register_all()
@@ -30,7 +42,7 @@ def main():
     queue.init()
     log.info("Worker started, polling every %ss", POLL_INTERVAL)
 
-    while True:
+    while not _shutting_down:
         task = queue.dequeue()
         if task is None:
             time.sleep(POLL_INTERVAL)
@@ -44,6 +56,8 @@ def main():
         except Exception as exc:
             log.exception("Task %s failed", task["id"])
             queue.fail(task["id"], str(exc))
+
+    log.info("Worker shut down gracefully")
 
 
 if __name__ == "__main__":

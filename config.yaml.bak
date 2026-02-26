@@ -30,7 +30,7 @@ integrations:
   llm: fast
   platforms:
     inbox:
-      limit: 3
+      limit: 5
       classifications:
         human: is this a personal email written by a human?
         robot: is this email from an automated system?
@@ -62,7 +62,7 @@ integrations:
 - type: github
   name: personal
   schedule:
-    every: 10m
+    every: 11m
   llm: fast
     # orgs: [myorg, anotherorg]       # Restrict to specific GitHub organizations
     # repos: [myorg/myrepo]           # Restrict to specific repositories (org/repo)
@@ -92,7 +92,7 @@ directories:
   logs: /Users/greg/Documents/Greg_test/gaas_logs
 scripts:
   foo:
-    shell: "echo hello world\necho hey world"
+    shell: "echo hello world\necho hey worlds"
     description: 'baz'
     timeout: 120
     inputs: []
