@@ -1,0 +1,42 @@
+{% from "components/_config.html" import render_llm_form, render_new_llm_form %}
+
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-2xl font-bold">LLM Profiles</h2>
+  <button class="btn btn-outline btn-sm" @click="adding = !adding; editing = null">+ Add</button>
+</div>
+
+<div x-show="adding" x-cloak>
+  {{ render_new_llm_form() }}
+</div>
+
+<div class="overflow-x-auto mb-8">
+  <table class="table table-zebra">
+    <thead>
+      <tr><th>Name</th><th>Base URL</th><th>Model</th><th>Token</th><th>Parameters</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for profile in llm_profiles %}
+      <tr>
+        <td class="font-mono font-semibold">{{ profile.name }}</td>
+        <td class="text-sm">{{ profile.base_url }}</td>
+        <td class="text-sm font-mono">{{ profile.model }}</td>
+        <td class="text-sm">{{ profile.token or "—" }}</td>
+        <td class="text-sm">{{ profile.parameters or "—" }}</td>
+        <td class="text-sm">
+          <button class="btn btn-ghost btn-xs" @click="editing = editing === '{{ profile.name }}' ? null : '{{ profile.name }}'; adding = false">Edit</button>
+          {% if llm_profiles | length > 1 %}
+          <button class="btn btn-ghost btn-xs text-error"
+                  hx-delete="/ui/config/llms/{{ profile.name }}" hx-target="#llm-section" hx-swap="innerHTML"
+                  hx-confirm="Delete LLM profile '{{ profile.name }}'?">Delete</button>
+          {% endif %}
+        </td>
+      </tr>
+      <tr x-show="editing === '{{ profile.name }}'" x-cloak>
+        <td colspan="6">
+          {{ render_llm_form(profile.name, profile, llm_names) }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

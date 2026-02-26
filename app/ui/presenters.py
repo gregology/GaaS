@@ -1,6 +1,11 @@
 """Transform app state into template-ready view models.
 
 All secret masking and provenance computation happens here, never in templates.
+
+Config-editing contexts (config_context, llm_profiles_context, etc.) read
+from disk via load_config() so the UI always reflects the file as written.
+Runtime contexts (dashboard, queue, logs) use the in-memory singleton since
+they display the state of the running system.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from app.config import (
     BasePlatformConfig,
     YoloAction,
     config,
+    load_config,
     load_platform_const,
     resolve_provenance,
     safety_warnings,
@@ -73,6 +79,8 @@ class IntegrationView:
     type: str
     name: str
     schedule: str | None
+    schedule_type: str
+    schedule_value: str
     llm_profile: str
     fields: dict[str, str]
     platforms: list[PlatformView]
@@ -144,13 +152,29 @@ def _load_secret_values() -> frozenset[str]:
 
 
 # ---------------------------------------------------------------------------
+# Display config — read from disk so the UI always shows the file as written
+# ---------------------------------------------------------------------------
+
+
+def _load_display_config():
+    """Load config fresh from disk for UI display.
+
+    This is intentionally separate from the runtime singleton. The UI
+    shows what's on disk; the running system uses what was loaded at
+    startup. The 'restart required' banner communicates the gap.
+    """
+    cfg, _ = load_config()
+    return cfg
+
+
+# ---------------------------------------------------------------------------
 # LLM profiles
 # ---------------------------------------------------------------------------
 
 
-def _present_llm_profiles(secret_values: frozenset[str]) -> list[LLMProfileView]:
+def _present_llm_profiles(cfg, secret_values: frozenset[str]) -> list[LLMProfileView]:
     profiles = []
-    for name, llm_cfg in config.llms.items():
+    for name, llm_cfg in cfg.llms.items():
         profiles.append(LLMProfileView(
             name=name,
             base_url=llm_cfg.base_url,
@@ -251,11 +275,17 @@ def _present_platform(
 
 def _present_integration(integration, secret_values: frozenset[str]) -> IntegrationView:
     schedule = None
+    schedule_type = "none"
+    schedule_value = ""
     if integration.schedule:
         if integration.schedule.every:
             schedule = f"every {integration.schedule.every}"
+            schedule_type = "every"
+            schedule_value = integration.schedule.every
         elif integration.schedule.cron:
             schedule = f"cron: {integration.schedule.cron}"
+            schedule_type = "cron"
+            schedule_value = integration.schedule.cron
 
     fields = {}
     for fname in type(integration).model_fields:
@@ -280,6 +310,8 @@ def _present_integration(integration, secret_values: frozenset[str]) -> Integrat
         type=integration.type,
         name=integration.name,
         schedule=schedule,
+        schedule_type=schedule_type,
+        schedule_value=schedule_value,
         llm_profile=integration.llm,
         fields=fields,
         platforms=platforms,
@@ -291,9 +323,9 @@ def _present_integration(integration, secret_values: frozenset[str]) -> Integrat
 # ---------------------------------------------------------------------------
 
 
-def _present_scripts() -> list[ScriptView]:
+def _present_scripts(cfg) -> list[ScriptView]:
     scripts = []
-    for name, script_cfg in config.scripts.items():
+    for name, script_cfg in cfg.scripts.items():
         scripts.append(ScriptView(
             name=name,
             description=script_cfg.description,
@@ -383,6 +415,7 @@ def _read_log_file(date: str) -> str | None:
 
 
 def dashboard_context() -> dict:
+    """Dashboard shows the running system's state — uses runtime singleton."""
     secret_values = _load_secret_values()
     return {
         "integrations": [_present_integration(i, secret_values) for i in config.integrations],
@@ -393,17 +426,81 @@ def dashboard_context() -> dict:
 
 
 def config_context() -> dict:
+    """Config page shows what's on disk — reads fresh from the file."""
+    from app.ui.yaml_rw import is_dirty, read_raw_yaml
+
+    cfg = _load_display_config()
     secret_values = _load_secret_values()
     return {
-        "llm_profiles": _present_llm_profiles(secret_values),
-        "integrations": [_present_integration(i, secret_values) for i in config.integrations],
-        "scripts": _present_scripts(),
+        "llm_profiles": _present_llm_profiles(cfg, secret_values),
+        "integrations": [_present_integration(i, secret_values) for i in cfg.integrations],
+        "scripts": _present_scripts(cfg),
         "directories": {
-            "notes": str(config.directories.notes or ""),
-            "task_queue": str(config.directories.task_queue),
-            "logs": str(config.directories.logs),
-            "custom_integrations": str(config.directories.custom_integrations or ""),
+            "notes": str(cfg.directories.notes or ""),
+            "task_queue": str(cfg.directories.task_queue),
+            "logs": str(cfg.directories.logs),
+            "custom_integrations": str(cfg.directories.custom_integrations or ""),
         },
+        "llm_names": list(cfg.llms.keys()),
+        "raw_yaml": read_raw_yaml(),
+        "config_dirty": is_dirty(),
+    }
+
+
+def llm_profiles_context() -> dict:
+    from app.ui.yaml_rw import is_dirty
+
+    cfg = _load_display_config()
+    secret_values = _load_secret_values()
+    return {
+        "llm_profiles": _present_llm_profiles(cfg, secret_values),
+        "llm_names": list(cfg.llms.keys()),
+        "config_dirty": is_dirty(),
+    }
+
+
+def scripts_list_context() -> dict:
+    from app.ui.yaml_rw import is_dirty
+
+    cfg = _load_display_config()
+    return {
+        "scripts": _present_scripts(cfg),
+        "config_dirty": is_dirty(),
+    }
+
+
+def directories_context() -> dict:
+    from app.ui.yaml_rw import is_dirty
+
+    cfg = _load_display_config()
+    return {
+        "directories": {
+            "notes": str(cfg.directories.notes or ""),
+            "task_queue": str(cfg.directories.task_queue),
+            "logs": str(cfg.directories.logs),
+            "custom_integrations": str(cfg.directories.custom_integrations or ""),
+        },
+        "config_dirty": is_dirty(),
+    }
+
+
+def integration_header_context(index: int) -> dict:
+    cfg = _load_display_config()
+    secret_values = _load_secret_values()
+    integration = _present_integration(cfg.integrations[index], secret_values)
+    return {
+        "integration": integration,
+        "llm_names": list(cfg.llms.keys()),
+        "index": index,
+    }
+
+
+def raw_yaml_context() -> dict:
+    from app.ui.yaml_rw import is_dirty, read_raw_yaml
+
+    return {
+        "raw_yaml": read_raw_yaml(),
+        "config_dirty": is_dirty(),
     }
 
 

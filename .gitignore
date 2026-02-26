@@ -130,7 +130,9 @@ celerybeat.pid
 # Environments
 .env
 config.yaml
+config.yaml.bak
 config.yml
+config.yml.bak
 secrets.yaml
 .venv
 env/

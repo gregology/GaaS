@@ -71,3 +71,192 @@
   </div>
 </div>
 {% endmacro %}
+
+{# ---------------------------------------------------------------------------
+   Edit form macros (Phase 2)
+   --------------------------------------------------------------------------- #}
+
+{% macro render_llm_form(profile_name, profile, llm_names) %}
+<form hx-post="/ui/config/llms/{{ profile_name }}" hx-target="#llm-section" hx-swap="innerHTML"
+      class="card bg-base-200 p-4 my-2">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="form-control">
+      <label class="label"><span class="label-text">Base URL</span></label>
+      <input type="text" name="base_url" value="{{ profile.base_url }}" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Model</span></label>
+      <input type="text" name="model" value="{{ profile.model }}" class="input input-bordered input-sm" required />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Token</span></label>
+      <input type="text" name="token" value="{{ profile.token }}" class="input input-bordered input-sm" placeholder="Leave blank or use raw YAML editor for !secret" readonly />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Parameters (YAML)</span></label>
+      <textarea name="parameters" class="textarea textarea-bordered textarea-sm font-mono" rows="2">{{ profile.parameters or '' }}</textarea>
+    </div>
+  </div>
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro render_new_llm_form() %}
+<form hx-post="/ui/config/llms/_new" hx-target="#llm-section" hx-swap="innerHTML"
+      class="card bg-base-200 p-4 my-2">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="form-control">
+      <label class="label"><span class="label-text">Profile Name</span></label>
+      <input type="text" name="profile_name" class="input input-bordered input-sm" required placeholder="e.g. fast" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Base URL</span></label>
+      <input type="text" name="base_url" value="http://localhost:11434" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Model</span></label>
+      <input type="text" name="model" class="input input-bordered input-sm" required placeholder="model-name:latest" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Parameters (YAML)</span></label>
+      <textarea name="parameters" class="textarea textarea-bordered textarea-sm font-mono" rows="2">temperature: 0.7</textarea>
+    </div>
+  </div>
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-sm">Create</button>
+    <button type="button" class="btn btn-ghost btn-sm" @click="adding = false">Cancel</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro render_directory_form(directories) %}
+<form hx-post="/ui/config/directories" hx-target="#directories-section" hx-swap="innerHTML"
+      class="card bg-base-200 p-4 my-2">
+  <div class="grid grid-cols-1 gap-3">
+    <div class="form-control">
+      <label class="label"><span class="label-text">Notes</span></label>
+      <input type="text" name="notes" value="{{ directories.notes }}" class="input input-bordered input-sm" placeholder="Optional" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Task Queue</span></label>
+      <input type="text" name="task_queue" value="{{ directories.task_queue }}" class="input input-bordered input-sm" required />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Logs</span></label>
+      <input type="text" name="logs" value="{{ directories.logs }}" class="input input-bordered input-sm" required />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Custom Integrations</span></label>
+      <input type="text" name="custom_integrations" value="{{ directories.custom_integrations }}" class="input input-bordered input-sm" placeholder="Optional" />
+    </div>
+  </div>
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro render_script_form(script_name, script) %}
+<form hx-post="/ui/config/scripts/{{ script_name }}" hx-target="#scripts-section" hx-swap="innerHTML"
+      class="card bg-base-200 p-4 my-2">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="form-control">
+      <label class="label"><span class="label-text">Description</span></label>
+      <input type="text" name="description" value="{{ script.description }}" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Timeout (s)</span></label>
+      <input type="number" name="timeout" value="{{ script.timeout }}" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Inputs (comma-separated)</span></label>
+      <input type="text" name="inputs" value="{{ script.inputs | join(', ') }}" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Output variable</span></label>
+      <input type="text" name="output" value="{{ script.output or '' }}" class="input input-bordered input-sm" placeholder="Optional" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">On output</span></label>
+      <input type="text" name="on_output" value="{{ script.on_output }}" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control flex-row items-center gap-2 pt-8">
+      <input type="checkbox" name="reversible" class="checkbox checkbox-sm" {{ 'checked' if script.reversible }} />
+      <span class="label-text">Reversible</span>
+    </div>
+  </div>
+  <div class="form-control mt-3">
+    <label class="label"><span class="label-text">Shell</span></label>
+    <textarea name="shell" class="textarea textarea-bordered textarea-sm font-mono" rows="5" required>{{ script.shell }}</textarea>
+  </div>
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro render_new_script_form() %}
+<form hx-post="/ui/config/scripts/_new" hx-target="#scripts-section" hx-swap="innerHTML"
+      class="card bg-base-200 p-4 my-2">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="form-control">
+      <label class="label"><span class="label-text">Script Name</span></label>
+      <input type="text" name="script_name" class="input input-bordered input-sm" required placeholder="e.g. deploy" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Description</span></label>
+      <input type="text" name="description" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Timeout (s)</span></label>
+      <input type="number" name="timeout" value="120" class="input input-bordered input-sm" />
+    </div>
+    <div class="form-control">
+      <label class="label"><span class="label-text">Inputs (comma-separated)</span></label>
+      <input type="text" name="inputs" class="input input-bordered input-sm" />
+    </div>
+  </div>
+  <div class="form-control mt-3">
+    <label class="label"><span class="label-text">Shell</span></label>
+    <textarea name="shell" class="textarea textarea-bordered textarea-sm font-mono" rows="5" required placeholder="echo hello"></textarea>
+  </div>
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-sm">Create</button>
+    <button type="button" class="btn btn-ghost btn-sm" @click="adding = false">Cancel</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro render_integration_settings_form(integration, llm_names, index) %}
+<form hx-post="/ui/config/integrations/{{ index }}/settings" hx-target="#integration-{{ index }}-header" hx-swap="innerHTML"
+      class="flex flex-wrap items-end gap-3 mt-2">
+  <input type="hidden" name="integration_id" value="{{ integration.id }}" />
+  <div class="form-control">
+    <label class="label"><span class="label-text text-xs">Schedule type</span></label>
+    <select name="schedule_type" class="select select-bordered select-sm">
+      <option value="every" {{ 'selected' if integration.schedule_type == 'every' }}>Every</option>
+      <option value="cron" {{ 'selected' if integration.schedule_type == 'cron' }}>Cron</option>
+      <option value="none" {{ 'selected' if integration.schedule_type == 'none' }}>None</option>
+    </select>
+  </div>
+  <div class="form-control">
+    <label class="label"><span class="label-text text-xs">Schedule value</span></label>
+    <input type="text" name="schedule_value" value="{{ integration.schedule_value }}" class="input input-bordered input-sm" placeholder="e.g. 30m or 0 8 * * 1-5" />
+  </div>
+  <div class="form-control">
+    <label class="label"><span class="label-text text-xs">LLM Profile</span></label>
+    <select name="llm" class="select select-bordered select-sm">
+      {% for lname in llm_names %}
+      <option value="{{ lname }}" {{ 'selected' if integration.llm_profile == lname }}>{{ lname }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Save</button>
+  <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+</form>
+{% endmacro %}

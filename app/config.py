@@ -567,3 +567,15 @@ if safety_warnings:
     _log = logging.getLogger(__name__)
     for _w in safety_warnings:
         _log.warning(_w)
+
+
+def reload_config(config_path: Path = _CONFIG_PATH) -> None:
+    """Reload config from disk into the module-level singleton.
+
+    Used by the UI after writing config changes so the page renders
+    updated values. Does NOT affect the running scheduler/worker — a
+    full process restart is still required for those.
+    """
+    global config, safety_warnings, _secrets_cache
+    _secrets_cache = None  # bust the secrets cache
+    config, safety_warnings = load_config(config_path)

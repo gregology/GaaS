@@ -1,27 +1,19 @@
 {% extends "base.html" %}
-{% from "components/_config.html" import render_fields, render_classification, render_automation, render_script %}
+{% from "components/_config.html" import render_fields, render_classification, render_automation, render_script, render_integration_settings_form %}
 {% block title %}GaaS — Config{% endblock %}
 {% block content %}
 
-<h2 class="text-2xl font-bold mb-4">LLM Profiles</h2>
-<div class="overflow-x-auto mb-8">
-  <table class="table table-zebra">
-    <thead>
-      <tr><th>Name</th><th>Base URL</th><th>Model</th><th>Token</th><th>Parameters</th></tr>
-    </thead>
-    <tbody>
-      {% for profile in llm_profiles %}
-      <tr>
-        <td class="font-mono font-semibold">{{ profile.name }}</td>
-        <td class="text-sm">{{ profile.base_url }}</td>
-        <td class="text-sm font-mono">{{ profile.model }}</td>
-        <td class="text-sm">{{ profile.token or "—" }}</td>
-        <td class="text-sm">{{ profile.parameters or "—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{# ------------------------------------------------------------------ #}
+{# LLM Profiles                                                       #}
+{# ------------------------------------------------------------------ #}
+
+<div id="llm-section" x-data="{ editing: null, adding: false }">
+  {% include "partials/_llm_section.html" %}
 </div>
+
+{# ------------------------------------------------------------------ #}
+{# Integrations                                                        #}
+{# ------------------------------------------------------------------ #}
 
 <h2 class="text-2xl font-bold mb-4">Integrations</h2>
 {% for integration in integrations %}
@@ -36,7 +28,10 @@
     {% endif %}
   </div>
   <div class="collapse-content">
-    <p class="text-sm mb-2"><span class="font-semibold">LLM:</span> {{ integration.llm_profile }}</p>
+    {% set index = loop.index0 %}
+    <div id="integration-{{ index }}-header" x-data="{ editing: false }">
+      {% include "partials/_integration_header.html" %}
+    </div>
 
     {% if integration.fields %}
     <h4 class="font-semibold mt-3 mb-1">Fields</h4>
@@ -73,25 +68,41 @@
 </div>
 {% endfor %}
 
-{% if scripts %}
-<h2 class="text-2xl font-bold mb-4">Scripts</h2>
-{% for script in scripts %}
-{{ render_script(script) }}
-{% endfor %}
-{% endif %}
+{# ------------------------------------------------------------------ #}
+{# Scripts                                                             #}
+{# ------------------------------------------------------------------ #}
 
-<h2 class="text-2xl font-bold mb-4 mt-8">Directories</h2>
-<div class="overflow-x-auto mb-8">
-  <table class="table table-zebra">
-    <thead><tr><th>Directory</th><th>Path</th></tr></thead>
-    <tbody>
-      {% for name, path in directories.items() %}
-      {% if path %}
-      <tr><td class="font-mono">{{ name }}</td><td class="text-sm">{{ path }}</td></tr>
-      {% endif %}
-      {% endfor %}
-    </tbody>
-  </table>
+<div id="scripts-section" x-data="{ editing: null, adding: false }">
+  {% include "partials/_scripts_section.html" %}
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Directories                                                         #}
+{# ------------------------------------------------------------------ #}
+
+<div id="directories-section" x-data="{ editing: false }">
+  {% include "partials/_directories_section.html" %}
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Raw YAML Editor (escape hatch)                                     #}
+{# ------------------------------------------------------------------ #}
+
+<div class="collapse collapse-arrow bg-base-100 shadow mt-8 mb-8">
+  <input type="checkbox" />
+  <div class="collapse-title">
+    <h2 class="text-2xl font-bold">Raw YAML Editor</h2>
+    <p class="text-sm opacity-70">Edit config.yaml directly. Use this for !secret values and advanced edits.</p>
+  </div>
+  <div class="collapse-content">
+    <form hx-post="/ui/config/yaml" hx-target="#raw-yaml-result" hx-swap="innerHTML">
+      <textarea name="yaml_content" class="textarea textarea-bordered font-mono text-xs w-full" rows="20">{{ raw_yaml }}</textarea>
+      <div id="raw-yaml-result" class="mt-2"></div>
+      <div class="flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% endblock %}
