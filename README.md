@@ -1,5 +1,7 @@
 # GaaS (Greg as a Service)
 
+_A controllable AI personal assistant running locally on your hardware._
+
 GaaS is built on 3 principles:
 
  - **Reversibility** - autonomous actions can be undone
