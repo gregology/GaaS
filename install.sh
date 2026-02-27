@@ -22,7 +22,7 @@ GAAS_BIN_DIR="${GAAS_BIN_DIR:-$HOME/.local/bin}"
 GAAS_BRANCH="${GAAS_BRANCH:-main}"
 WRAPPER="${GAAS_BIN_DIR}/gaas"
 MIN_PYTHON_MAJOR=3
-MIN_PYTHON_MINOR=12
+MIN_PYTHON_MINOR=11
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 
