@@ -142,7 +142,7 @@ class TestDoctorChecks:
     """Test individual doctor checks in isolation."""
 
     def test_check_python_passes(self):
-        """We're running on 3.12+ so this should pass."""
+        """We're running on 3.11+ so this should pass."""
         from app.doctor import check_python
 
         assert check_python() is True

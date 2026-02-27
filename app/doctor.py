@@ -50,13 +50,13 @@ def _section(msg: str) -> None:
 
 
 def check_python() -> bool:
-    """Check Python version is 3.12+."""
+    """Check Python version is 3.11+."""
     major, minor = sys.version_info[:2]
     version = f"{major}.{minor}.{sys.version_info.micro}"
-    if major >= 3 and minor >= 12:
+    if major >= 3 and minor >= 11:
         _pass(f"Python {version}")
         return True
-    _fail(f"Python {version} (need 3.12+)")
+    _fail(f"Python {version} (need 3.11+)")
     return False
 
 
