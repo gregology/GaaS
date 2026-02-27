@@ -6,6 +6,7 @@ GaaS is built on 3 principles:
  - **Audibility** - autonomous activities are logged for humans
  - **Accountability** - irreversable actions require a human
 
+GaaS is designed to run **100% locally** on relatively modest hardware.
 
 ## Reversability
 
