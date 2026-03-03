@@ -39,6 +39,8 @@ Each platform defines its own `DETERMINISTIC_SOURCES` and `IRREVERSIBLE_ACTIONS`
 
 Script actions are also subject to provenance gating. Scripts are **irreversible by default** because the system can't statically verify what shell code does. A script definition can opt in to reversibility with `reversible: true`, which allows it to fire from `llm`/`hybrid` provenance without `!yolo`. Without that flag, script actions follow the same rules as `unsubscribe`: blocked from non-deterministic provenance unless explicitly overridden.
 
+Service actions follow the same pattern. Services declared in an integration's `manifest.yaml` are irreversible by default. The manifest can declare `reversible: true` for read-only services (like Gemini's web research). Irreversible services from LLM provenance are blocked unless wrapped in `!yolo`.
+
 ### The `!yolo` override
 
 You're a grown up and sometimes you want to do silly things like let an LLM-triggered automation do something irreversible. The `!yolo` tag is an explicit, auditable escape hatch for this.
@@ -87,3 +89,5 @@ If you're adding a new action:
 5. Use `log.human()` so the action appears in the [daily audit log](human-log.md)
 
 If you're adding a script: define it in the `scripts:` section of `config.yaml`. Scripts are irreversible by default. Set `reversible: true` only if you're confident the script's effects can be undone.
+
+If you're adding a service: declare it in the integration's `manifest.yaml` under `services:`. Services are irreversible by default. Set `reversible: true` only for read-only services with no side effects. The `call` + `inputs` syntax in automation `then` clauses triggers services the same way scripts are triggered.

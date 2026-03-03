@@ -5,8 +5,10 @@ This is the practical companion to the [testing philosophy](philosophy.md). It c
 ## Running tests
 
 ```bash
-uv run pytest -v           # All tests
-uv run pytest tests/safety # Safety tests only
+uv run pytest -v                           # All tests (core + packages)
+uv run pytest tests/safety                 # Safety tests only
+uv run pytest packages/gaas-email/tests/   # Email tests in isolation (no app config)
+uv run pytest packages/gaas-gemini/tests/  # Gemini tests in isolation
 ```
 
 CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sync, pytest.
@@ -28,13 +30,19 @@ tests/
     test_automation_invariants.py        # Property tests: all possible classifications
     test_chaos.py                        # Chaos tests: garbage LLM output
     test_provenance.py                   # Provenance derivation + safety validation
-  integrations/
-    email/
-      test_classify.py                   # Condition matching, operators, schema building
-      test_act.py                        # Action execution, allowlist enforcement
-      test_email_store.py                # EmailStore CRUD, move, dedup
-      test_mail_parsing.py               # Header parsing (auth, unsubscribe, dates, calendar)
+
+packages/gaas-email/tests/
+  test_classify.py                       # Condition matching, operators, schema building
+  test_act.py                            # Action execution, allowlist enforcement
+  test_email_store.py                    # EmailStore CRUD, move, dedup
+  test_mail_parsing.py                   # Header parsing (auth, unsubscribe, dates, calendar)
+
+packages/gaas-gemini/tests/
+  test_client.py                         # GeminiClient two-pass flow (mocked)
+  test_web_research.py                   # Service handler with/without output_schema
 ```
+
+Package tests import from `gaas_sdk.*` directly, not through `app.*` re-export shims. They run without loading the app config singleton, which means they can be executed in isolation.
 
 ## Fixtures
 
@@ -88,7 +96,7 @@ Assert on the whole tree, not individual files. After `enqueue -> dequeue -> com
 
 1. **Categorize the reversibility tier.** Read-only, soft reversible, hard reversible, or irreversible. This comes first. See the [safety model](../architecture/safety-model.md) for tier definitions.
 
-2. **Add the action.** For platform-specific actions: add to `SIMPLE_ACTIONS` or dict action handling in `act.py`. For cross-cutting actions (like scripts): add to the shared action layer in `app/actions/`. The `SIMPLE_ACTIONS` set must not grow without deliberate reversibility review.
+2. **Add the action.** For platform-specific actions: add to `SIMPLE_ACTIONS` or dict action handling in `act.py`. For cross-cutting actions (like scripts): add to the shared action layer in `gaas_sdk/actions.py`. For services: declare in the integration's `manifest.yaml` under `services:`. The `SIMPLE_ACTIONS` set must not grow without deliberate reversibility review.
 
 3. **Write tests matching the tier.** Read-only gets unit tests. Soft reversible gets filesystem snapshot assertions. Hard reversible gets shadow/dry-run verification. Irreversible gets property-based safety invariants and mandatory dry run.
 
