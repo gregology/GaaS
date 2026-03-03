@@ -67,6 +67,15 @@ integrations:
     api_key: !secret gemini_api_key
     model: gemini-3-pro-preview 
 
+queue_policies:                          # Optional: dedup + rate limiting
+  defaults:
+    deduplicate_pending: true            # Skip enqueue if identical payload pending
+  overrides:
+    service.gemini.web_research:
+      rate_limit:
+        max: 10                          # Max enqueues per time window
+        per: 1h                          # Window: 30m, 1h, 1d, etc.
+
 directories:
   notes: /path/to/notes
   task_queue: /path/to/task_queue

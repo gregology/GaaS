@@ -1,6 +1,13 @@
 import yaml
 
-from app.config import ScriptConfig, YoloAction, _Loader
+from app.config import (
+    QueuePolicyConfig,
+    RateLimitConfig,
+    ScriptConfig,
+    TaskPolicyConfig,
+    YoloAction,
+    _Loader,
+)
 from app.evaluate import unwrap_actions
 
 
@@ -84,3 +91,31 @@ class TestScriptConfig:
         assert script.output is None
         assert script.on_output == "human_log"
         assert script.reversible is False
+
+
+class TestQueuePolicyConfig:
+    def test_defaults(self):
+        policy = QueuePolicyConfig()
+        assert policy.defaults.deduplicate_pending is True
+        assert policy.defaults.rate_limit is None
+        assert policy.overrides == {}
+
+    def test_override_with_rate_limit(self):
+        policy = QueuePolicyConfig(
+            overrides={
+                "service.gemini.web_research": TaskPolicyConfig(
+                    rate_limit=RateLimitConfig(max=10, per="1h"),
+                )
+            }
+        )
+        override = policy.overrides["service.gemini.web_research"]
+        assert override.rate_limit is not None
+        assert override.rate_limit.max == 10
+        assert override.rate_limit.per == "1h"
+        assert override.deduplicate_pending is True  # default inherited
+
+    def test_dedup_disabled(self):
+        policy = QueuePolicyConfig(
+            defaults=TaskPolicyConfig(deduplicate_pending=False),
+        )
+        assert policy.defaults.deduplicate_pending is False

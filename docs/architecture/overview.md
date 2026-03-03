@@ -22,13 +22,30 @@ data/queue/
   failed/     # Failed with error captured
 ```
 
-Each file is named `{priority}_{timestamp}_{uuid}.yaml`. The priority prefix means a sorted directory listing returns tasks in priority order. Lower numbers go first.
+Each file is named `{priority}_{timestamp}_{uuid}--{fingerprint}--{task_type}.yaml`. The priority prefix means a sorted directory listing returns tasks in priority order. Lower numbers go first. The `--` suffix encodes a SHA-256 fingerprint of the payload and the task type string, so policy checks (dedup, rate limiting) can work with globs instead of parsing YAML files.
 
 Dequeue uses `os.rename()`, which is atomic on POSIX. If two workers race for the same file, one gets a `FileNotFoundError` and moves on. No locks needed.
 
 Why filesystem instead of Redis or a proper message queue? Two reasons. First, you can `ls` the queue and see exactly what's happening. `pending/` has three files? Three tasks waiting. `failed/` has one? Something broke and you can read the YAML to see what. Second, it keeps memory usage low. RAM is better spent on LLM inference than on a queueing system.
 
 A task must exist in exactly one directory at all times. The test suite enforces this invariant with stateful property testing that randomly interleaves queue operations and checks conservation after every step.
+
+### Queue policies
+
+Dedup and rate limiting are configured in `config.yaml` and enforced at enqueue time by `queue_policy.py`. Dedup is on by default -- if an identical payload is already sitting in `pending/`, the enqueue is skipped. Rate limits are opt-in per task type.
+
+```yaml
+queue_policies:
+  defaults:
+    deduplicate_pending: true
+  overrides:
+    service.gemini.web_research:
+      rate_limit:
+        max: 10
+        per: 1h
+```
+
+Manual API triggers bypass policies. The scheduler and automation-driven enqueues go through the policy layer. Rejected enqueues are logged at info level with the reason.
 
 ## Note store
 
