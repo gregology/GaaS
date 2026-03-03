@@ -41,12 +41,12 @@ automations:
         service:
           call: gemini.default.web_research
           inputs:
-            prompt: "research $domain terms of service changes"
+            prompt: "research {{ domain }} terms of service changes"
 ```
 
 The `call` format is `{type}.{name}.{service_name}`. If you named your Gemini integration `research` instead of `default`, the call would be `gemini.research.web_research`.
 
-`$field` references in `inputs` get resolved against the automation context at runtime, same as script inputs.
+`{{ field }}` references in `inputs` are rendered as Jinja2 templates against the automation context at runtime, same as script inputs. Filters (`{{ domain | upper }}`), conditionals (`{% if ... %}`), and dot-access (`{{ classification.human }}`) are supported.
 
 ### Input schema
 
@@ -111,7 +111,7 @@ automations:
       - service:
           call: gemini.default.web_research
           inputs:
-            prompt: "research $domain terms of service changes"
+            prompt: "research {{ domain }} terms of service changes"
           on_result:
             - type: note
               path: research/tos_updates/
@@ -130,7 +130,7 @@ When triggered from LLM-provenance automations, `!yolo` is required:
   service:
     call: gemini.default.web_research
     inputs:
-      prompt: "research $domain terms of service"
+      prompt: "research {{ domain }} terms of service"
 ```
 
 From deterministic provenance (e.g., `when: {domain: "example.com"}`), no `!yolo` is needed.

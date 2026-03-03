@@ -228,7 +228,7 @@ class TestSafetyValidation:
         automations = [
             AutomationConfig(
                 when={"classification.human": "> 0.8"},
-                then=[{"script": {"name": "research_tos", "inputs": {"domain": "$domain"}}}],
+                then=[{"script": {"name": "research_tos", "inputs": {"domain": "{{ domain }}"}}}],
             ),
         ]
         integration, platform = _make_integration("test", automations)
@@ -242,7 +242,7 @@ class TestSafetyValidation:
         automations = [
             AutomationConfig(
                 when={"classification.human": "> 0.8"},
-                then=[YoloAction({"script": {"name": "research_tos", "inputs": {"domain": "$domain"}}})],
+                then=[YoloAction({"script": {"name": "research_tos", "inputs": {"domain": "{{ domain }}"}}})],
             ),
         ]
         integration, platform = _make_integration("test", automations)
@@ -255,7 +255,7 @@ class TestSafetyValidation:
         automations = [
             AutomationConfig(
                 when={"domain": "example.com"},
-                then=[{"script": {"name": "research_tos", "inputs": {"domain": "$domain"}}}],
+                then=[{"script": {"name": "research_tos", "inputs": {"domain": "{{ domain }}"}}}],
             ),
         ]
         integration, platform = _make_integration("test", automations)

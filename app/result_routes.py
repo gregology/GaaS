@@ -102,9 +102,13 @@ def _route_note(result: dict, task: dict, route_config: dict) -> Path:
         rel_path = filepath.relative_to(notes_dir)
     except ValueError:
         rel_path = filepath
-    text_len = len(text)
-    log.human(  # type: ignore[attr-defined]
-        "%s: result saved (%s chars) → %s", task_type, f"{text_len:,}", rel_path,
-    )
+    human_log_msg = payload.get("human_log")
+    if human_log_msg:
+        log.human("%s → %s", human_log_msg, rel_path)  # type: ignore[attr-defined]
+    else:
+        text_len = len(text)
+        log.human(  # type: ignore[attr-defined]
+            "%s: result saved (%s chars) → %s", task_type, f"{text_len:,}", rel_path,
+        )
 
     return filepath

@@ -36,6 +36,7 @@ services:
   web_research:
     name: "Web Research"
     handler: ".services.web_research.handle"
+    human_log: "Web research: {{ prompt | truncate(80) }}"
     input_schema:
       properties:
         prompt: { type: string }
@@ -53,7 +54,7 @@ then:
     service:
       call: gemini.default.web_research
       inputs:
-        prompt: "research $domain terms of service"
+        prompt: "research {{ domain }} terms of service"
 ```
 
 ## Result handling

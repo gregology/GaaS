@@ -74,7 +74,7 @@ Adds a custom `log.human()` method (level 25, between INFO and WARNING) that app
 
 Cross-cutting actions that can be triggered from any integration's automations. The evaluate phase partitions actions into platform-specific and shared types via `enqueue_actions()`.
 
-- **`actions/__init__.py`**: Re-exports `is_script_action()`, `is_service_action()`, `resolve_script_inputs()`, and `enqueue_actions()` from `gaas_sdk.actions`. The partitioning logic (scripts, services, platform actions) lives in the SDK.
+- **`actions/__init__.py`**: Re-exports `is_script_action()`, `is_service_action()`, `resolve_inputs()`, and `enqueue_actions()` from `gaas_sdk.actions`. The partitioning logic (scripts, services, platform actions) lives in the SDK.
 - **`actions/script.py`**: Script executor. Writes a bash preamble (with `log_human`/`log_info`/`log_warn` helpers) plus the user's shell code to a temp file, runs via `subprocess.run`, processes `\x1e`-delimited log records, captures output. The `handle()` function is the worker handler for `script.run` tasks.
 
 Script actions become individual `script.run` queue tasks. Service actions become individual `service.{domain}.{service_name}` queue tasks. Platform-specific actions are bundled separately. Each type has independent failure tracking in `failed/`.
@@ -100,7 +100,7 @@ Script actions become individual `script.run` queue tasks. Service actions becom
 
 Routes service handler return values to configured destinations. After a service handler returns data, the worker calls `route_results(result, task)` which reads `on_result` from the task payload and dispatches to route handlers. Currently supports one route type:
 
-- **`note`** — saves result to NoteStore as markdown (frontmatter: service, integration, inputs, sources, timestamps; body: text content) and writes a human log breadcrumb pointing to the file.
+- **`note`** — saves result to NoteStore as markdown (frontmatter: service, integration, inputs, sources, timestamps; body: text content) and writes a human log breadcrumb pointing to the file. If the task payload contains a `human_log` string (resolved at enqueue time from config or manifest templates), that string is used in the log breadcrumb instead of the generic "result saved (N chars)" format.
 
 Falls back to the `note` route for service tasks that lack explicit `on_result` config. Routing failures are logged but never propagate — the task already completed successfully, and the result is preserved in the task YAML regardless.
 

@@ -184,6 +184,35 @@ class TestRouteNote:
         assert post.content == "Research text"
         assert post["structured"] == {"summary": "A structured summary"}
 
+    def test_human_log_used_when_present(self, notes_dir):
+        """When payload has human_log, it is used in the log breadcrumb."""
+        result = {"text": "Research output", "sources": []}
+        task = _make_task(human_log="Privacy Policy update for questrade.com")
+        route_config = {"type": "note"}
+
+        with patch("app.result_routes.runtime.get_notes_dir", return_value=notes_dir):
+            with patch("app.result_routes.log") as mock_log:
+                filepath = _route_note(result, task, route_config)
+
+        # The human log call should use the custom message
+        mock_log.human.assert_called_once()
+        call_args = mock_log.human.call_args[0]
+        assert "Privacy Policy update for questrade.com" in call_args[1]
+
+    def test_human_log_fallback_when_absent(self, notes_dir):
+        """When payload lacks human_log, the default format is used."""
+        result = {"text": "Research output", "sources": []}
+        task = _make_task()  # No human_log
+        route_config = {"type": "note"}
+
+        with patch("app.result_routes.runtime.get_notes_dir", return_value=notes_dir):
+            with patch("app.result_routes.log") as mock_log:
+                filepath = _route_note(result, task, route_config)
+
+        mock_log.human.assert_called_once()
+        call_args = mock_log.human.call_args[0]
+        assert "result saved" in call_args[0]
+
     def test_filename_contains_timestamp_and_task_id(self, notes_dir):
         """Filename includes timestamp and short task ID for uniqueness."""
         result = {"text": "test", "sources": []}

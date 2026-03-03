@@ -27,8 +27,7 @@ def handle(task: dict):
     task_type = task["payload"].get("type")
     handler = HANDLERS.get(task_type)
     if handler is None:
-        log.warning("Unknown task type: %s", task_type)
-        return None
+        raise ValueError(f"Unknown task type: {task_type}")
     return handler(task)
 
 
