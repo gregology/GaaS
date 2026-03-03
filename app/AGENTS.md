@@ -35,6 +35,7 @@ Key design decisions:
 - **Atomic dequeue**: Uses `os.rename()` which is atomic on POSIX. If another worker grabs the file first, `FileNotFoundError` is caught and `None` returned.
 - **Priority**: 0-9, lower number = higher priority. Dequeue processes lowest-numbered files first via sorted filename listing.
 - **Task conservation**: A task must exist in exactly one directory at all times. Tests verify this invariant with stateful property testing.
+- **Result capture**: `complete()` accepts an optional `result` dict. When present, it's stored in the completed task YAML alongside `completed_at`. Service handlers return result dicts; platform handlers return None.
 
 ### Runtime Init (`runtime_init.py`)
 
@@ -95,9 +96,21 @@ Script actions become individual `script.run` queue tasks. Service actions becom
 - Safety validation flags script actions as irreversible unless `ScriptConfig.reversible` is `True`
 - `_validate_script_references()` warns about automation rules referencing undefined scripts (automations are not disabled — the handler skips unknown scripts at runtime)
 
+### Result Routes (`result_routes.py`)
+
+Routes service handler return values to configured destinations. After a service handler returns data, the worker calls `route_results(result, task)` which reads `on_result` from the task payload and dispatches to route handlers. Currently supports one route type:
+
+- **`note`** — saves result to NoteStore as markdown (frontmatter: service, integration, inputs, sources, timestamps; body: text content) and writes a human log breadcrumb pointing to the file.
+
+Falls back to the `note` route for service tasks that lack explicit `on_result` config. Routing failures are logged but never propagate — the task already completed successfully, and the result is preserved in the task YAML regardless.
+
+Designed for extensibility: new route types (e.g., `chat_reply` for the future threaded chat interface) are added by implementing a handler function and adding an `elif` branch to the dispatcher.
+
 ### Worker (`worker.py`)
 
-Simple polling loop: dequeue, route to handler by task type string, mark complete or failed. The handler registry lives in `app/integrations/__init__.py`. After `register_all()`, the worker also registers `script.run` for the shared action layer (`app.actions.script.handle`) and service handlers discovered from integration manifests.
+Polling loop: dequeue, route to handler by task type string, capture the return value, route results, mark complete or failed. The handler registry lives in `app/integrations/__init__.py`. After `register_all()`, the worker also registers `script.run` for the shared action layer (`app.actions.script.handle`) and service handlers discovered from integration manifests.
+
+When a handler returns a non-None result (service handlers), the worker: (1) calls `route_results()` to persist the output via configured routes, and (2) passes the result to `queue.complete()` which stores it in the completed task YAML as an audit record.
 
 Integrations are discovered through three channels: the builtin `app/integrations/` directory, a user-configurable custom integrations directory, and Python entry points (`gaas.integrations` group). Entry-point discovery allows packages under `packages/` to register themselves without being copied into `app/integrations/`.
 

@@ -87,10 +87,12 @@ def enqueue_actions(
             parts = call.rsplit(".", 2)
             if len(parts) == 3:
                 svc_type, svc_name, service_name = parts
+                on_result = service_ref.get("on_result", [{"type": "note"}])
                 runtime.enqueue({
                     "type": f"service.{svc_type}.{service_name}",
                     "integration": f"{svc_type}.{svc_name}",
                     "inputs": resolved_inputs,
+                    "on_result": on_result,
                 }, priority=priority, provenance=provenance)
                 log.info("Enqueued service.%s.%s for integration=%s.%s",
                          svc_type, service_name, svc_type, svc_name)

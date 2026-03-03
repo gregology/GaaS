@@ -1,4 +1,4 @@
-# GaaS example config. A single email integration to get started.
+# GaaS example config. Email integration with optional Gemini web research.
 # See packages/gaas-email/README.md, packages/gaas-github/README.md,
 # and packages/gaas-gemini/README.md for more config options and examples.
 
@@ -35,6 +35,24 @@ integrations:
           - when:
               classification.human: "< 0.2"
             then: archive
+          # LLM-based: research ToS updates via Gemini (requires gemini integration below)
+          # - when:
+          #     classification.user_agreement_update: true
+          #   then:
+          #     - archive
+          #     - service:
+          #         call: gemini.default.web_research
+          #         inputs:
+          #           prompt: "research $domain terms of service changes"
+          #         # on_result:                           # Optional, defaults to saving as a note
+          #         #   - type: note
+          #         #     path: research/tos_updates/      # Custom subdirectory under notes
+
+  # Optional: Gemini web research service (requires `uv sync --extra gemini`)
+  # - type: gemini
+  #   name: default
+  #   api_key: !secret gemini_api_key
+  #   # model: gemini-2.0-flash                           # Optional, uses SDK default
 
 directories:
   notes: /path/to/notes

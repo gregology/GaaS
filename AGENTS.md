@@ -119,7 +119,8 @@ app/
   config.py        # YAML config + !secret references, dynamic Pydantic models
   loader.py        # Integration discovery (builtin dir, custom dir, entry points)
   queue.py         # Filesystem-based task queue
-  worker.py        # Task worker polling loop
+  worker.py        # Task worker polling loop, result capture + routing
+  result_routes.py # Service result routing (note persistence, human log breadcrumb)
   supervisor.py    # Process supervisor (manages server + worker)
   scheduler.py     # Cron scheduling from config
   llm.py           # LLM backend abstraction, structured output, retry

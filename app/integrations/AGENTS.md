@@ -62,6 +62,21 @@ then:
 
 `$field` references in `inputs` are resolved against the automation context at evaluate time, same as script inputs.
 
+**Result routing**: Service handlers return data (e.g., research text + sources). The worker captures this return value and routes it via `on_result` descriptors in the task payload. By default, `enqueue_actions()` sets `on_result: [{"type": "note"}]` for all service tasks. This saves the output as a markdown note under `{notes_dir}/services/{domain}/{service_name}/` and writes a human log breadcrumb. Automations can override the default routing:
+
+```yaml
+then:
+  - service:
+      call: gemini.default.web_research
+      inputs:
+        prompt: "research $domain terms of service"
+      on_result:
+        - type: note
+          path: research/tos/    # Custom subdirectory under notes_dir
+```
+
+The result is also stored in the completed task YAML in `done/` regardless of routing. Service handlers receive the full task dict from the worker and read inputs from `task["payload"]`, consistent with platform handlers.
+
 ### Integration Package Structure
 
 ```
@@ -184,10 +199,10 @@ When conditions use AND semantics. All conditions in a `when` dict must match. M
 Some actions are cross-cutting -- they can be triggered from any integration's automations. The evaluate phase partitions actions via `enqueue_actions()` from `gaas_sdk.actions`:
 
 - **Script actions** (`{"script": {"name": "...", "inputs": {...}}}`) are enqueued as individual `script.run` queue tasks with resolved inputs.
-- **Service actions** (`{"service": {"call": "...", "inputs": {...}}}`) are enqueued as individual `service.{domain}.{service_name}` queue tasks.
+- **Service actions** (`{"service": {"call": "...", "inputs": {...}}}`) are enqueued as individual `service.{domain}.{service_name}` queue tasks with default `on_result` routing (note + human log).
 - **Platform actions** (strings like `"archive"`, dicts like `{"draft_reply": "..."}`) are bundled into a single platform act task as before.
 
-Each platform's `evaluate.py` calls `enqueue_actions()` instead of `runtime.enqueue()` directly. The partitioning is transparent to the rest of the pipeline.
+Each platform's `evaluate.py` calls `enqueue_actions()` instead of `runtime.enqueue()` directly. The partitioning is transparent to the rest of the pipeline. Service actions can include `on_result` in their config to override default result routing.
 
 ## Prompt Templates
 

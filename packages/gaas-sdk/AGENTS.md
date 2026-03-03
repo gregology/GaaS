@@ -53,7 +53,7 @@ No circular imports. Models and runtime are foundational.
 
 **YoloAction wrapper** in `models.py`: wraps actions tagged `!yolo` in YAML. `isinstance(action, YoloAction)` is how the safety validation identifies explicitly acknowledged risks. Works on both scalar (`!yolo unsubscribe`) and mapping nodes (`!yolo {script: ...}`).
 
-**Action partitioning** in `actions.py`: `enqueue_actions()` splits an action list into three buckets. Script actions become individual `script.run` queue tasks. Service actions become individual `service.{domain}.{service_name}` tasks. Platform-specific actions get bundled into a single platform act task. The partitioning is transparent to the rest of the pipeline.
+**Action partitioning** in `actions.py`: `enqueue_actions()` splits an action list into three buckets. Script actions become individual `script.run` queue tasks. Service actions become individual `service.{domain}.{service_name}` tasks with default `on_result: [{"type": "note"}]` routing. Platform-specific actions get bundled into a single platform act task. The partitioning is transparent to the rest of the pipeline. Service actions can override the default `on_result` via their config dict.
 
 ## When modifying this package
 

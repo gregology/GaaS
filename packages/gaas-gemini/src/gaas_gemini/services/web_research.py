@@ -21,14 +21,18 @@ log = logging.getLogger(__name__)
 def handle(task: dict) -> dict:
     """Handle a service.gemini.web_research queue task.
 
-    Expected task payload:
+    Receives the full task dict from the worker, consistent with
+    platform handlers.  Reads inputs from ``task["payload"]``.
+
+    Payload fields:
         integration: "gemini.{name}"  — integration ID to load config from
         inputs:
             prompt: str               — the research query
             output_schema: dict       — optional JSON schema for structured output
     """
-    integration_id = task.get("integration", "")
-    inputs = task.get("inputs", {})
+    payload = task["payload"]
+    integration_id = payload.get("integration", "")
+    inputs = payload.get("inputs", {})
     prompt = inputs.get("prompt", "")
 
     if not prompt:

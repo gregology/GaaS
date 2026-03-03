@@ -187,3 +187,45 @@ class TestEnqueueServiceActions:
             types = [c[0][0]["type"] for c in mock_enqueue.call_args_list]
             assert "service.gemini.web_research" in types
             assert "email.inbox.act" in types
+
+    def test_default_on_result_for_service(self):
+        """Service tasks include default on_result routing."""
+        resolver = _make_resolver()
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
+            enqueue_actions(
+                actions=[{
+                    "service": {
+                        "call": "gemini.default.web_research",
+                        "inputs": {"prompt": "test"},
+                    },
+                }],
+                platform_payload={"type": "email.inbox.act", "uid": "123"},
+                resolve_value=resolver,
+                classification={},
+                provenance="rule",
+            )
+            payload = mock_enqueue.call_args[0][0]
+            assert payload["on_result"] == [{"type": "note"}]
+
+    def test_custom_on_result_from_action(self):
+        """Service action can override on_result routing."""
+        resolver = _make_resolver()
+        custom_routes = [{"type": "note", "path": "research/"}]
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
+            enqueue_actions(
+                actions=[{
+                    "service": {
+                        "call": "gemini.default.web_research",
+                        "inputs": {"prompt": "test"},
+                        "on_result": custom_routes,
+                    },
+                }],
+                platform_payload={"type": "email.inbox.act", "uid": "123"},
+                resolve_value=resolver,
+                classification={},
+                provenance="rule",
+            )
+            payload = mock_enqueue.call_args[0][0]
+            assert payload["on_result"] == custom_routes
