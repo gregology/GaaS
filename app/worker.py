@@ -5,6 +5,7 @@ import time
 import app.human_log  # noqa: F401 — registers log.human()
 from app import queue
 from app.actions.script import handle as script_run_handle
+from app.runtime_init import register_runtime
 from app.loader import load_all_modules
 from app.integrations import HANDLERS, register_all
 
@@ -33,6 +34,9 @@ def handle(task: dict):
 def main():
     signal.signal(signal.SIGTERM, _shutdown_handler)
     signal.signal(signal.SIGINT, _shutdown_handler)
+
+    # Register SDK runtime before loading integration modules
+    register_runtime()
 
     # Load integration modules and register handlers
     load_all_modules()

@@ -235,9 +235,9 @@ Why: the storage pattern is the same everywhere. Only the domain logic differs. 
 
 ### `GitHubEntityStore` base class for PR and issue stores
 
-`PullRequestStore` and `IssueStore` share identical logic for `find`, `find_anywhere`, `active_keys`, `update`, `move_to_synced`, and `restore_to_active` — all keyed by `(org, repo, number)`. The `GitHubEntityStore` base class in `app/integrations/github/entity_store.py` provides these methods. Each subclass overrides only `save()` with entity-specific field mappings.
+`PullRequestStore` and `IssueStore` share identical logic for `find`, `find_anywhere`, `active_keys`, `update`, `move_to_synced`, and `restore_to_active` -- all keyed by `(org, repo, number)`. The `GitHubEntityStore` base class in `packages/gaas-github/src/gaas_github/entity_store.py` provides these methods. Each subclass overrides only `save()` with entity-specific field mappings.
 
-Why: the two stores were 106 and 105 lines of nearly identical code. Divergence risk was high — a bug fix in one might not propagate to the other. The base class lives at the integration level (not in `app/`) because it's GitHub-specific infrastructure, not a core pattern.
+Why: the two stores were 106 and 105 lines of nearly identical code. Divergence risk was high -- a bug fix in one might not propagate to the other. The base class lives at the integration level (not in the SDK) because it's GitHub-specific infrastructure, not a core pattern.
 
 ### `synced/` subdirectory
 
@@ -263,11 +263,11 @@ Double underscore again because org names and repo names can contain single char
 
 ## Plugin System
 
-### Home Assistant-inspired two-directory model
+### Three-channel discovery model
 
-Built-in integrations in `app/integrations/`. Custom integrations in a user-configured directory. Same discovery mechanism for both.
+Integrations are discovered through three channels: builtin directory (`app/integrations/`), custom directory (user-configured), and Python entry points (`gaas.integrations` group). Priority: builtin > custom > entry points.
 
-Why: HA's pattern is battle-tested for this exact problem. Built-ins ship with the project. Custom integrations don't touch the source tree. Custom integrations can shadow built-ins (with a warning), following HA's `custom_components/` behavior.
+The original two-directory model followed HA's pattern. Entry-point discovery was added when email and GitHub were extracted into installable packages under `packages/`. Entry points let packages register themselves without being copied into `app/integrations/`. The priority order means users can shadow an installed package with a local override during development, same as HA's `custom_components/` behavior.
 
 ### `manifest.yaml` for discovery, not Python conventions
 
@@ -283,13 +283,13 @@ Why: custom integrations can define their own config fields without modifying co
 
 ### Integration isolation over shared abstractions
 
-Each integration owns its pipeline stages. `evaluate.py`, `classify.py`, `act.py` — each lives inside the integration package with platform-specific logic (snapshot construction, prompt rendering, action execution, value resolution).
+Each integration owns its pipeline stages. `evaluate.py`, `classify.py`, `act.py` -- each lives inside the integration package with platform-specific logic (snapshot construction, prompt rendering, action execution, value resolution).
 
-However, the automation evaluation engine and classification schema builder are **infrastructure**, not pipeline logic. They operate on `AutomationConfig` and `ClassificationConfig` from `app.config` and have no integration-specific knowledge. They live in `app/evaluate.py` and `app/classify.py` respectively, in the same category as `resolve_provenance` and `YoloAction`.
+However, the automation evaluation engine and classification schema builder are **infrastructure**, not pipeline logic. They operate on `AutomationConfig` and `ClassificationConfig` and have no integration-specific knowledge. They live in `gaas_sdk.evaluate` and `gaas_sdk.classify` respectively, in the same category as `resolve_provenance` and `YoloAction`. (`app/evaluate.py` and `app/classify.py` are re-export shims for backwards compatibility.)
 
-The line: if it operates on core config types and is identical across all platforms (evaluation engine, schema building, provenance), it goes in `app/`. If it touches platform-specific data (snapshots, prompts, stores, actions, value resolution), it stays in the integration.
+The line: if it operates on core config types and is identical across all platforms (evaluation engine, schema building, provenance), it goes in the SDK. If it touches platform-specific data (snapshots, prompts, stores, actions, value resolution), it stays in the integration.
 
-This was originally "everything stays in the integration" but was refined when three-way duplication of the evaluation engine across platforms created a maintenance burden. The evaluation engine is the safety-critical dispatch boundary — having a single authoritative copy reduces the risk of divergence in safety-critical code. Custom integrations import from `app.evaluate` just like they import from `app.config`.
+This was originally "everything stays in the integration" but was refined when three-way duplication of the evaluation engine across platforms created a maintenance burden. The evaluation engine is the safety-critical dispatch boundary -- having a single authoritative copy reduces the risk of divergence in safety-critical code. Integrations import from `gaas_sdk.evaluate` and `gaas_sdk.classify`.
 
 ### `const.py` loaded via `spec_from_file_location`, not `import_module`
 
@@ -320,6 +320,46 @@ Why: the domain determines the handler namespace (`email.inbox.check`). If it do
 `check_dependencies()` tries to import each declared dependency. If it fails, the integration is skipped with a warning.
 
 Why: auto-installing packages at runtime is a side effect that can break environments. GaaS is explicit about what's installed. If you want an integration, install its deps with `uv add`.
+
+---
+
+## SDK Extraction and Package Architecture
+
+### Shared SDK package instead of copying code
+
+Integrations were tightly coupled to 7 `app.*` modules. Every handler file imported from `app.config`, `app.evaluate`, `app.classify`, `app.store`, `app.queue`, `app.llm`. That made them impossible to develop, test, or distribute independently.
+
+The `gaas-sdk` package extracts the contracts layer: models, evaluation engine, classification utilities, NoteStore, manifest dataclasses, provenance resolution, runtime registration, and shared action partitioning. Integrations depend on `gaas-sdk` instead of `app.*`.
+
+The alternative was each integration copying what it needs from `app.*`. No shared package. Simple, but then you have three copies of the evaluate engine drifting apart. Bug fixes need to land in multiple places. The SDK is small (~400 lines total across 8 modules) and the extraction boundary is clean, so the coordination cost of a shared package is low.
+
+### Runtime registration instead of dependency injection or ABC contracts
+
+Integration code needs to enqueue tasks, look up config, create LLM conversations. Previously that meant `from app.config import config` and `from app import queue`. The runtime registration pattern replaces this: integrations call `gaas_sdk.runtime.enqueue()`, `runtime.get_integration()`, etc. The app registers real implementations at startup.
+
+Two alternatives were considered:
+
+**Dependency injection via constructor args.** Every handler function would receive a `context` object with `enqueue`, `get_config`, etc. Clean in theory. In practice it means changing every handler signature, threading context through 5+ levels of the check->collect->classify->evaluate->act pipeline, and updating every test. The handler registry pattern (simple function that takes a task dict) is one of the better parts of the current design.
+
+**Abstract base classes for integration contracts.** Define `class BaseIntegration(ABC)` with abstract methods. This works well for frameworks like Django but fights the current architecture. GaaS integrations are bags of handler functions registered by name, not class hierarchies. Forcing them into an OOP shape would mean rewriting the handler registry, the manifest system, and the worker dispatch.
+
+### Re-export shims for backwards compatibility
+
+After extraction, `app/evaluate.py` re-exports from `gaas_sdk.evaluate`, `app/classify.py` from `gaas_sdk.classify`, etc. Existing code that imports from `app.*` keeps working.
+
+Why: this lets the migration happen incrementally. Internal code can be updated to import from `gaas_sdk.*` over time. The shims are thin (one-line re-exports) and have no maintenance cost.
+
+### Installable packages over namespace packages
+
+Email, GitHub, and Gemini ship as independent packages under `packages/` with their own `pyproject.toml` files. Each registers as a Python entry point.
+
+The alternative was namespace packages (`gaas.sdk`, `gaas.email`, etc.) in a single package. This avoids multi-package complexity but has rough edges with editable installs, and doesn't give you independent installability. You still can't `pip install gaas-email` without pulling the whole repo. The point was making integrations distributable.
+
+### Services as a manifest declaration
+
+Integrations can declare callable services alongside (or instead of) platforms. A service is a handler invoked from automation `then` clauses. Services are irreversible by default, same as scripts.
+
+The service system reuses all existing infrastructure: action partitioning, provenance gating, `!yolo` overrides. No new safety machinery was needed. Service actions go through `enqueue_actions()` just like script actions.
 
 ---
 

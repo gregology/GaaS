@@ -14,7 +14,7 @@ from app.config import (
     _validate_automation_safety,
     resolve_provenance,
 )
-from app.integrations.email.platforms.inbox.const import DETERMINISTIC_SOURCES, IRREVERSIBLE_ACTIONS
+from gaas_email.platforms.inbox.const import DETERMINISTIC_SOURCES, IRREVERSIBLE_ACTIONS
 
 
 # ---------------------------------------------------------------------------
@@ -276,5 +276,74 @@ class TestSafetyValidation:
         ]
         integration, platform = _make_integration("test", automations)
         warnings = _validate_automation_safety([integration], scripts=scripts)
+        assert warnings == []
+        assert len(platform.automations) == 1
+
+    def test_service_from_llm_provenance_blocked(self):
+        """Non-reversible service action + LLM provenance is blocked."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=[{"service": {"call": "unknown.default.action"}}],
+            ),
+        ]
+        integration, platform = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert len(warnings) == 1
+        assert "service:" in warnings[0]
+        assert len(platform.automations) == 0
+
+    def test_service_with_yolo_from_llm_allowed(self):
+        """YoloAction wrapping a service action + LLM provenance is allowed."""
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=[YoloAction({"service": {"call": "gemini.default.web_research"}})],
+            ),
+        ]
+        integration, platform = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+        assert len(platform.automations) == 1
+
+    def test_service_from_deterministic_provenance_allowed(self):
+        """Service action from rule provenance is allowed without !yolo."""
+        automations = [
+            AutomationConfig(
+                when={"domain": "example.com"},
+                then=[{"service": {"call": "gemini.default.web_research"}}],
+            ),
+        ]
+        integration, platform = _make_integration("test", automations)
+        warnings = _validate_automation_safety([integration])
+        assert warnings == []
+        assert len(platform.automations) == 1
+
+    def test_reversible_service_from_llm_allowed(self):
+        """Service with reversible=True + LLM provenance is allowed without !yolo."""
+        from gaas_sdk.manifest import ServiceManifest
+        from unittest.mock import patch
+
+        # Create a temporary manifest with a reversible service
+        svc = ServiceManifest(
+            name="Web Research",
+            description="Grounded search",
+            handler=".services.web_research.handle",
+            reversible=True,
+        )
+
+        # Mock get_manifests to return a manifest with the service
+        mock_manifest = MagicMock()
+        mock_manifest.services = {"web_research": svc}
+
+        automations = [
+            AutomationConfig(
+                when={"classification.human": "> 0.8"},
+                then=[{"service": {"call": "gemini.default.web_research"}}],
+            ),
+        ]
+        integration, platform = _make_integration("test", automations)
+        with patch("app.loader.get_manifests", return_value={"gemini": mock_manifest}):
+            warnings = _validate_automation_safety([integration])
         assert warnings == []
         assert len(platform.automations) == 1

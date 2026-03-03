@@ -80,8 +80,8 @@ class TestEnqueueActions:
     def test_platform_only(self, queue_dir):
         """Platform-only actions produce a single platform task, no script tasks."""
         resolver = _make_resolver()
-        with patch("app.actions.queue") as mock_queue:
-            mock_queue.enqueue.return_value = "task_1"
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
             enqueue_actions(
                 actions=["archive", "spam"],
                 platform_payload={"type": "email.inbox.act", "uid": "123"},
@@ -89,16 +89,16 @@ class TestEnqueueActions:
                 classification={},
                 provenance="rule",
             )
-            assert mock_queue.enqueue.call_count == 1
-            call_args = mock_queue.enqueue.call_args
+            assert mock_enqueue.call_count == 1
+            call_args = mock_enqueue.call_args
             assert call_args[0][0]["type"] == "email.inbox.act"
             assert call_args[0][0]["actions"] == ["archive", "spam"]
 
     def test_script_only(self, queue_dir):
         """Script-only actions produce script tasks, no platform task."""
         resolver = _make_resolver(domain="test.com")
-        with patch("app.actions.queue") as mock_queue:
-            mock_queue.enqueue.return_value = "task_1"
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
             enqueue_actions(
                 actions=[{"script": {"name": "research", "inputs": {"domain": "$domain"}}}],
                 platform_payload={"type": "email.inbox.act", "uid": "123"},
@@ -106,8 +106,8 @@ class TestEnqueueActions:
                 classification={},
                 provenance="rule",
             )
-            assert mock_queue.enqueue.call_count == 1
-            call_args = mock_queue.enqueue.call_args
+            assert mock_enqueue.call_count == 1
+            call_args = mock_enqueue.call_args
             assert call_args[0][0]["type"] == "script.run"
             assert call_args[0][0]["script_name"] == "research"
             assert call_args[0][0]["inputs"] == {"domain": "test.com"}
@@ -115,8 +115,8 @@ class TestEnqueueActions:
     def test_mixed_actions(self, queue_dir):
         """Mixed actions produce both script and platform tasks."""
         resolver = _make_resolver(domain="test.com")
-        with patch("app.actions.queue") as mock_queue:
-            mock_queue.enqueue.return_value = "task_1"
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
             enqueue_actions(
                 actions=[
                     "archive",
@@ -127,17 +127,17 @@ class TestEnqueueActions:
                 classification={},
                 provenance="rule",
             )
-            assert mock_queue.enqueue.call_count == 2
+            assert mock_enqueue.call_count == 2
             # First call is script.run, second is platform act
-            script_call = mock_queue.enqueue.call_args_list[0]
-            platform_call = mock_queue.enqueue.call_args_list[1]
+            script_call = mock_enqueue.call_args_list[0]
+            platform_call = mock_enqueue.call_args_list[1]
             assert script_call[0][0]["type"] == "script.run"
             assert platform_call[0][0]["type"] == "email.inbox.act"
 
     def test_empty_actions(self, queue_dir):
         """Empty actions produce no tasks."""
         resolver = _make_resolver()
-        with patch("app.actions.queue") as mock_queue:
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
             enqueue_actions(
                 actions=[],
                 platform_payload={"type": "email.inbox.act", "uid": "123"},
@@ -145,13 +145,13 @@ class TestEnqueueActions:
                 classification={},
                 provenance="rule",
             )
-            mock_queue.enqueue.assert_not_called()
+            mock_enqueue.assert_not_called()
 
     def test_provenance_passed_through(self, queue_dir):
         """Provenance is passed to all enqueued tasks."""
         resolver = _make_resolver()
-        with patch("app.actions.queue") as mock_queue:
-            mock_queue.enqueue.return_value = "task_1"
+        with patch("gaas_sdk.runtime._enqueue") as mock_enqueue:
+            mock_enqueue.return_value = "task_1"
             enqueue_actions(
                 actions=["archive"],
                 platform_payload={"type": "email.inbox.act", "uid": "123"},
@@ -160,6 +160,6 @@ class TestEnqueueActions:
                 provenance="llm",
                 priority=7,
             )
-            call_kwargs = mock_queue.enqueue.call_args
+            call_kwargs = mock_enqueue.call_args
             assert call_kwargs[1]["provenance"] == "llm"
             assert call_kwargs[1]["priority"] == 7
