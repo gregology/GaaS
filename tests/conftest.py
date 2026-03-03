@@ -19,6 +19,9 @@ if not _config_path.exists():
     )
 
 from app import queue  # noqa: E402
+from app.runtime_init import register_runtime  # noqa: E402
+
+register_runtime()
 
 
 @pytest.fixture

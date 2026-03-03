@@ -67,3 +67,9 @@ def register_all() -> None:
             entry_key = f"{domain}.{platform_name}"
             entry_task = f"{domain}.{platform_name}.{platform_manifest.entry_task}"
             ENTRY_TASKS[entry_key] = entry_task
+
+        # 3. Service handlers
+        for service_name, service_manifest in manifest.services.items():
+            handler = _load_handler(module_name, service_manifest.handler)
+            if handler:
+                HANDLERS[f"service.{domain}.{service_name}"] = handler

@@ -9,6 +9,18 @@ import yaml
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
 
+# Re-export models from gaas_sdk so existing imports work unchanged
+from gaas_sdk.models import (  # noqa: F401
+    YoloAction,
+    ScheduleConfig,
+    ScriptConfig,
+    ClassificationConfig,
+    AutomationConfig,
+    BasePlatformConfig,
+    BaseIntegrationConfig,
+)
+from gaas_sdk.provenance import resolve_provenance  # noqa: F401
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _PROJECT_ROOT / "config.yaml"
 SECRETS_PATH = _PROJECT_ROOT / "secrets.yaml"
@@ -41,28 +53,6 @@ _Loader = type("_Loader", (yaml.SafeLoader,), {})
 _Loader.add_constructor("!secret", _secret_constructor)
 
 
-class YoloAction:
-    """Marker for actions tagged with !yolo in config.
-
-    Signals that the user has explicitly acknowledged the risk of
-    running this irreversible action with non-deterministic provenance.
-    """
-
-    def __init__(self, value: str | dict):
-        self.value = value
-
-    def __repr__(self) -> str:
-        return f"YoloAction({self.value!r})"
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, YoloAction):
-            return self.value == other.value
-        return NotImplemented
-
-    def __hash__(self) -> int:
-        return hash(("yolo", repr(self.value)))
-
-
 def _yolo_constructor(loader: yaml.SafeLoader, node: yaml.Node) -> YoloAction:
     if isinstance(node, yaml.ScalarNode):
         return YoloAction(loader.construct_scalar(node))
@@ -83,31 +73,6 @@ _Loader.add_constructor("!yolo", _yolo_constructor)
 # ---------------------------------------------------------------------------
 
 
-def resolve_provenance(when: dict[str, Any], deterministic_sources: frozenset[str]) -> str:
-    """Derive provenance from the namespaces used in automation conditions.
-
-    Returns "rule" if all conditions reference deterministic sources,
-    "llm" if all reference classification, or "hybrid" if mixed.
-
-    deterministic_sources must be supplied by the caller from the
-    integration's own const.py — config.py holds no integration-specific
-    knowledge about what is or isn't deterministic.
-    """
-    has_deterministic = False
-    has_nondeterministic = False
-    for key in when:
-        namespace = key.split(".")[0]
-        if namespace in deterministic_sources:
-            has_deterministic = True
-        else:
-            has_nondeterministic = True
-    if has_nondeterministic and has_deterministic:
-        return "hybrid"
-    if has_nondeterministic:
-        return "llm"
-    return "rule"
-
-
 def load_platform_const(integration_type: str, platform_name: str):
     """Dynamically load a platform's const module, or None if absent.
 
@@ -124,7 +89,7 @@ def load_platform_const(integration_type: str, platform_name: str):
 
 
 # ---------------------------------------------------------------------------
-# Config models
+# Config models (app-specific, not in SDK)
 # ---------------------------------------------------------------------------
 
 
@@ -133,98 +98,6 @@ class LLMConfig(BaseModel):
     model: str
     token: str | None = None
     parameters: dict[str, Any] = {}
-
-
-class ScheduleConfig(BaseModel):
-    every: str | None = None
-    cron: str | None = None
-
-
-class ScriptConfig(BaseModel):
-    description: str = ""
-    inputs: list[str] = []
-    timeout: int = 120
-    shell: str
-    output: str | None = None
-    on_output: str = "human_log"
-    reversible: bool = False
-
-
-class ClassificationConfig(BaseModel):
-    prompt: str
-    type: Literal["confidence", "boolean", "enum"] = "confidence"
-    values: list[str] | None = None
-
-    @model_validator(mode="after")
-    def _check_values(self) -> ClassificationConfig:
-        if self.type == "enum" and not self.values:
-            raise ValueError("'values' is required when type is 'enum'")
-        if self.type != "enum" and self.values is not None:
-            raise ValueError("'values' is only valid when type is 'enum'")
-        return self
-
-
-class AutomationConfig(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    when: dict[str, Any]
-    then: list[str | dict[str, Any] | YoloAction]
-
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_then(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        then = data.get("then")
-        if isinstance(then, (str, dict, YoloAction)):
-            data["then"] = [then]
-        return data
-
-
-class BasePlatformConfig(BaseModel):
-    """Common fields shared by all platform configs.
-
-    Classifications and automations are per-platform, not per-integration.
-    Dynamically created platform models inherit from this class.
-    """
-
-    classifications: dict[str, ClassificationConfig] = {}
-    automations: list[AutomationConfig] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_classifications(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        raw = data.get("classifications")
-        if not raw or not isinstance(raw, dict):
-            return data
-        normalized = {}
-        for key, value in raw.items():
-            if isinstance(value, str):
-                normalized[key] = {"prompt": value}
-            else:
-                normalized[key] = value
-        data["classifications"] = normalized
-        return data
-
-
-class BaseIntegrationConfig(BaseModel):
-    """Common fields shared by all integration configs.
-
-    After the platforms refactor, classifications and automations
-    live in BasePlatformConfig, not here.
-    """
-
-    type: str
-    name: str
-    schedule: ScheduleConfig | None = None
-    llm: str = "default"
-
-    @property
-    def id(self) -> str:
-        """Composite identity following HA's entity_id pattern: ``{type}.{name}``."""
-        return f"{self.type}.{self.name}"
 
 
 class DirectoriesConfig(BaseModel):
@@ -375,6 +248,23 @@ def _find_unsafe_actions(
                 script_def = scripts.get(script_name)
                 if script_def is None or not script_def.reversible:
                     unsafe.append(f"script:{script_name}")
+        elif isinstance(action, dict) and "service" in action:
+            service_ref = action["service"]
+            call = service_ref.get("call", "")
+            parts = call.rsplit(".", 2)
+            if len(parts) == 3:
+                svc_type, _svc_name, service_name = parts
+                # Look up service reversibility from manifest registry
+                from app.loader import get_manifests
+                manifests = get_manifests()
+                manifest = manifests.get(svc_type)
+                if manifest and service_name in manifest.services:
+                    if not manifest.services[service_name].reversible:
+                        unsafe.append(f"service:{call}")
+                else:
+                    unsafe.append(f"service:{call}")
+            else:
+                unsafe.append(f"service:{call}")
         elif isinstance(action, dict):
             name = next(iter(action), "")
             if name in irreversible_actions:
@@ -452,7 +342,7 @@ def _validate_script_references(
 ) -> list[str]:
     """Warn about automation rules that reference undefined scripts.
 
-    The automations are NOT disabled — the handler gracefully skips
+    The automations are NOT disabled -- the handler gracefully skips
     unknown scripts at runtime, matching the act.py pattern.
     """
     warnings = []
@@ -475,6 +365,44 @@ def _validate_script_references(
                                 f"Automation in '{integration.name}.{platform_name}' "
                                 f"references undefined script '{name}'"
                             )
+    return warnings
+
+
+def _validate_service_references(
+    integrations: list,
+) -> list[str]:
+    """Warn about automation rules that reference unconfigured services.
+
+    The automations are NOT disabled -- the handler gracefully skips
+    unknown services at runtime.
+    """
+    from app.loader import get_manifests
+
+    manifests = get_manifests()
+    warnings = []
+    for integration in integrations:
+        platforms = getattr(integration, "platforms", None)
+        if platforms is None:
+            continue
+        for platform_name in type(platforms).model_fields:
+            platform = getattr(platforms, platform_name)
+            if platform is None or not hasattr(platform, "automations"):
+                continue
+            for automation in platform.automations:
+                for action in automation.then:
+                    raw = action.value if isinstance(action, YoloAction) else action
+                    if isinstance(raw, dict) and "service" in raw:
+                        service_ref = raw["service"]
+                        call = service_ref.get("call", "")
+                        parts = call.rsplit(".", 2)
+                        if len(parts) == 3:
+                            svc_type, _svc_name, service_name = parts
+                            manifest = manifests.get(svc_type)
+                            if not manifest or service_name not in manifest.services:
+                                warnings.append(
+                                    f"Automation in '{integration.name}.{platform_name}' "
+                                    f"references unknown service '{call}'"
+                                )
     return warnings
 
 
@@ -554,11 +482,12 @@ def load_config(config_path: Path = _CONFIG_PATH) -> tuple:
     cfg = AppConfig(**raw)
     warnings = _validate_automation_safety(cfg.integrations, scripts=cfg.scripts)
     warnings.extend(_validate_script_references(cfg.integrations, cfg.scripts))
+    warnings.extend(_validate_service_references(cfg.integrations))
     return cfg, warnings
 
 
 # ---------------------------------------------------------------------------
-# Module-level singleton — loaded eagerly at import time
+# Module-level singleton -- loaded eagerly at import time
 # ---------------------------------------------------------------------------
 
 config, safety_warnings = load_config()
@@ -573,7 +502,7 @@ def reload_config(config_path: Path = _CONFIG_PATH) -> None:
     """Reload config from disk into the module-level singleton.
 
     Used by the UI after writing config changes so the page renders
-    updated values. Does NOT affect the running scheduler/worker — a
+    updated values. Does NOT affect the running scheduler/worker -- a
     full process restart is still required for those.
     """
     global config, safety_warnings, _secrets_cache

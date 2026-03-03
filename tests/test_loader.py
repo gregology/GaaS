@@ -114,8 +114,8 @@ class TestLoadManifest:
         assert manifest.dependencies == []
         assert manifest.config_schema == {}
 
-    def test_builtin_flag(self, builtin_dir):
-        manifest = _load_manifest(builtin_dir / "email", builtin=True)
+    def test_builtin_flag(self, custom_dir):
+        manifest = _load_manifest(custom_dir / "mock_thing", builtin=True)
         assert manifest is not None
         assert manifest.builtin is True
 
@@ -126,11 +126,13 @@ class TestLoadManifest:
 
 
 class TestDiscoverIntegrations:
-    def test_discovers_builtin_integrations(self, builtin_dir):
+    def test_discovers_installed_integrations(self, builtin_dir):
         manifests = discover_integrations(builtin_dir)
         assert "email" in manifests
         assert "github" in manifests
-        assert manifests["email"].builtin is True
+        # Email and github are installed as entry-point packages
+        assert manifests["email"].entry_point_module is not None
+        assert manifests["github"].entry_point_module is not None
 
     def test_discovers_custom_integrations(self, builtin_dir, custom_dir):
         manifests = discover_integrations(builtin_dir, custom_dir)
@@ -168,7 +170,8 @@ class TestDiscoverIntegrations:
             tmp_path / "nonexistent", custom_dir
         )
         assert "mock_thing" in manifests
-        assert "email" not in manifests
+        # Entry-point integrations are still discovered even without builtin dir
+        assert "email" in manifests
 
 
 # ---------------------------------------------------------------------------
@@ -339,16 +342,18 @@ class TestCheckDependencies:
 
 
 class TestLoadConstModule:
-    def test_loads_builtin_email_inbox_const(self, builtin_dir):
-        manifest = _load_manifest(builtin_dir / "email", builtin=True)
+    def test_loads_email_inbox_const(self, builtin_dir):
+        manifests = discover_integrations(builtin_dir)
+        manifest = manifests["email"]
         const = load_platform_const_module(manifest, "inbox")
         assert const is not None
         assert hasattr(const, "DETERMINISTIC_SOURCES")
         assert hasattr(const, "IRREVERSIBLE_ACTIONS")
         assert hasattr(const, "SIMPLE_ACTIONS")
 
-    def test_loads_builtin_github_pr_const(self, builtin_dir):
-        manifest = _load_manifest(builtin_dir / "github", builtin=True)
+    def test_loads_github_pr_const(self, builtin_dir):
+        manifests = discover_integrations(builtin_dir)
+        manifest = manifests["github"]
         const = load_platform_const_module(manifest, "pull_requests")
         assert const is not None
         assert hasattr(const, "DETERMINISTIC_SOURCES")
@@ -362,7 +367,8 @@ class TestLoadConstModule:
         assert load_const_module(manifest) is None
 
     def test_returns_none_for_nonexistent_platform(self, builtin_dir):
-        manifest = _load_manifest(builtin_dir / "email", builtin=True)
+        manifests = discover_integrations(builtin_dir)
+        manifest = manifests["email"]
         assert load_platform_const_module(manifest, "nonexistent") is None
 
 

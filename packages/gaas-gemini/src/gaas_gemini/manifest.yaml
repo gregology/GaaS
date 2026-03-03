@@ -1,0 +1,26 @@
+domain: gemini
+name: "Google Gemini"
+version: "0.1.0"
+entry_task: ""
+dependencies:
+  - google-genai
+config_schema:
+  properties:
+    api_key:
+      type: string
+    model:
+      type: string
+  required:
+    - api_key
+platforms: {}
+services:
+  web_research:
+    name: "Web Research"
+    description: "Grounded web research using Gemini with Google Search"
+    handler: ".services.web_research.handle"
+    reversible: true
+    input_schema:
+      properties:
+        prompt: { type: string }
+        output_schema: { type: object }
+      required: [prompt]

@@ -11,6 +11,7 @@ config.py, which imports from here during load_config().
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import importlib.util
 import logging
 import sys
@@ -19,38 +20,13 @@ from pathlib import Path
 
 import yaml
 
+from gaas_sdk.manifest import (
+    IntegrationManifest,
+    PlatformManifest,
+    ServiceManifest,
+)
+
 log = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Manifest
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class PlatformManifest:
-    """Parsed platform definition from a manifest.yaml."""
-
-    name: str
-    entry_task: str
-    config_schema: dict
-    handlers: dict[str, str] = field(default_factory=dict)
-
-
-@dataclass
-class IntegrationManifest:
-    """Parsed manifest.yaml for an integration package."""
-
-    domain: str
-    name: str
-    version: str
-    entry_task: str
-    dependencies: list[str]
-    config_schema: dict
-    platforms: dict[str, PlatformManifest]
-    path: Path
-    builtin: bool
-    handlers: dict[str, str] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +68,35 @@ def _scan_directory(
     return manifests
 
 
+def _discover_entry_points() -> dict[str, IntegrationManifest]:
+    """Discover integrations installed as Python packages with entry points."""
+    manifests: dict[str, IntegrationManifest] = {}
+    try:
+        eps = importlib.metadata.entry_points(group="gaas.integrations")
+    except Exception:
+        log.debug("No gaas.integrations entry points found")
+        return manifests
+
+    for ep in eps:
+        try:
+            module = ep.load()
+            manifest_path = Path(module.__file__).parent / "manifest.yaml"
+            if not manifest_path.exists():
+                log.warning(
+                    "Entry point '%s' has no manifest.yaml at %s",
+                    ep.name, manifest_path.parent,
+                )
+                continue
+            manifest = _load_manifest(manifest_path.parent, builtin=False, skip_dir_check=True)
+            if manifest:
+                manifest.entry_point_module = module.__name__
+                manifests[manifest.domain] = manifest
+        except Exception:
+            log.exception("Failed to load entry point: %s", ep.name)
+
+    return manifests
+
+
 def discover_integrations(
     builtin_dir: Path,
     custom_dir: Path | None = None,
@@ -100,6 +105,8 @@ def discover_integrations(
 
     Custom integrations with the same domain as a built-in shadow it
     (with a logged warning). Populates the module-level manifest registry.
+
+    Priority: builtin > custom > entry_point.
     """
     global _manifests
     manifests = _scan_directory(builtin_dir, builtin=True)
@@ -113,12 +120,22 @@ def discover_integrations(
                 )
             manifests[domain] = manifest
 
+    # Entry points have lowest priority (shadowed by builtin and custom)
+    for domain, manifest in _discover_entry_points().items():
+        if domain in manifests:
+            log.debug(
+                "Entry point integration '%s' shadowed by builtin/custom",
+                domain,
+            )
+            continue
+        manifests[domain] = manifest
+
     _manifests = manifests
     return manifests
 
 
 def _load_manifest(
-    integration_dir: Path, builtin: bool
+    integration_dir: Path, builtin: bool, skip_dir_check: bool = False,
 ) -> IntegrationManifest | None:
     """Parse a manifest.yaml file into an IntegrationManifest."""
     manifest_path = integration_dir / "manifest.yaml"
@@ -137,7 +154,7 @@ def _load_manifest(
         log.warning("Manifest missing 'domain': %s", manifest_path)
         return None
 
-    if domain != integration_dir.name:
+    if not skip_dir_check and domain != integration_dir.name:
         log.warning(
             "Manifest domain '%s' does not match directory name '%s' in %s",
             domain,
@@ -156,6 +173,17 @@ def _load_manifest(
             handlers=plat_def.get("handlers", {}),
         )
 
+    raw_services = raw.get("services", {})
+    services: dict[str, ServiceManifest] = {}
+    for svc_name, svc_def in raw_services.items():
+        services[svc_name] = ServiceManifest(
+            name=svc_def.get("name", svc_name),
+            description=svc_def.get("description", ""),
+            handler=svc_def.get("handler", ""),
+            reversible=svc_def.get("reversible", False),
+            input_schema=svc_def.get("input_schema", {}),
+        )
+
     return IntegrationManifest(
         domain=domain,
         name=raw.get("name", domain),
@@ -167,6 +195,7 @@ def _load_manifest(
         handlers=raw.get("handlers", {}),
         path=integration_dir,
         builtin=builtin,
+        services=services,
     )
 
 
@@ -213,7 +242,7 @@ def load_all_modules() -> dict[str, object]:
         missing = check_dependencies(manifest)
         if missing:
             log.warning(
-                "Integration '%s' has missing dependencies: %s — skipping.",
+                "Integration '%s' has missing dependencies: %s -- skipping.",
                 domain,
                 ", ".join(missing),
             )
@@ -230,7 +259,9 @@ def load_all_modules() -> dict[str, object]:
 
 def _load_module(manifest: IntegrationManifest):
     """Import an integration's Python module."""
-    if manifest.builtin:
+    if manifest.entry_point_module:
+        return importlib.import_module(manifest.entry_point_module)
+    elif manifest.builtin:
         return importlib.import_module(f"app.integrations.{manifest.domain}")
     else:
         return _load_custom_module(manifest)
@@ -321,7 +352,9 @@ def load_platform_const_module(manifest: IntegrationManifest, platform_name: str
     if not const_path.exists():
         return None
 
-    if manifest.builtin:
+    if manifest.entry_point_module:
+        module_name = f"{manifest.entry_point_module}.platforms.{platform_name}.const"
+    elif manifest.builtin:
         module_name = f"app.integrations.{manifest.domain}.platforms.{platform_name}.const"
     else:
         module_name = f"gaas_ext.{manifest.domain}.platforms.{platform_name}.const"
