@@ -43,6 +43,6 @@ gaas-github = { path = "packages/gaas-github", editable = true }
 gaas-gemini = { path = "packages/gaas-gemini", editable = true }
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages/gaas-email/tests", "packages/gaas-gemini/tests"]
+testpaths = ["tests", "packages/gaas-email/tests", "packages/gaas-gemini/tests", "packages/gaas-github/tests", "packages/gaas-sdk/tests"]
 pythonpath = ["."]
 addopts = "--import-mode=importlib"
