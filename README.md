@@ -1,14 +1,12 @@
 # GaaS (Greg as a Service)
 
-_A controllable AI personal assistant running locally on your hardware._
+Your inbox is full of messages that were written for the sender, not for you. GaaS reads them, classifies them, and acts on rules you define. Archive the noise. Draft replies for the stuff that matters. Every action is logged in plain markdown so you can see exactly what happened and why. Runs locally on your hardware. Nothing leaves your machine. GaaS is your _controllable_ AI personal assistant.
 
 GaaS is built on 3 principles:
 
  - **Reversibility** - autonomous actions can be undone
  - **Audibility** - autonomous activities are logged for humans
  - **Accountability** - irreversable actions require a human
-
-GaaS is designed to run **100% locally** on relatively modest hardware.
 
 ## Reversability
 
@@ -40,38 +38,10 @@ GaaS is in **alpha** so shit will break.
 curl -fsSL https://raw.githubusercontent.com/gregology/GaaS/main/install.sh | bash
 ```
 
-
-## Design Principles
-
-### WWHAD
-
-_What would Home Assistant Do?_ Home Assistant has battle hardened patterns for complex configurations and intuitive UIs to set those configurations.
-
-### Human readable
-
-Every "decision" should leave a human readable audit trail.  
-Note: I put "decision" in quotation marks because LLMs do not make decisions, they make next token predictions.
-
-### Default to code
-
-Asking an LLM to do a programmable task is the robot equivalent of _this meeting could have been an email_. Don't burn tokens trying to convince a non deterministic machine to do a programmable task.
-
-### Zero trust
-
-Patterns should not rely on trusting a non deterministic machine.
-
-### Optimize for memory
-
-Memory is most valuable for inference. The disk based queueing system was added for human readability _and_ to reduce memory usage.
-
-### Provenance
-
-Not all classification is equal. An email classified by an LLM is a probabilistic guess. An email classified by its domain name is deterministic. The system tracks this distinction as **provenance** (`rule`, `llm`, or `hybrid`) and uses it to gate irreversible actions. Automations with LLM provenance cannot trigger irreversible actions unless explicitly overridden with `!yolo`.
-
-
 ## Documentation
 
 - [Why GaaS exists](docs/why.md) - The motivation and use cases
+- [Design principles](docs/why.md) - WWHAD, zero trust, default to code, and the rest of the non-negotiables
 - [API reference](docs/api.md) - Endpoints and examples
 - Architecture
   - [System overview](docs/architecture/overview.md) - Components and data flow
