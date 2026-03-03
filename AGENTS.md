@@ -138,7 +138,7 @@ Integrations ship as installable packages under `packages/` and are discovered v
 
 ## Configuration
 
-Config uses Home Assistant-inspired YAML with `!secret` references to a separate `secrets.yaml`. See `example.config.yaml` for the full schema. Key patterns:
+Config uses Home Assistant-inspired YAML with `!secret` references to a separate `secrets.yaml`. See `example.config.yaml` for a starter config and the integration READMEs (`packages/gaas-*/README.md`) for full config references. Key patterns:
 
 - **Classification shorthand**: `human: "is this a personal email?"` expands to `{prompt: "...", type: "confidence"}`
 - **Automation rules**: `when`/`then` pairs with operators (`>`, `>=`, `<`, `<=`, `==`) for confidence, exact/list match for enums, identity for booleans

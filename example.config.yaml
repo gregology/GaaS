@@ -1,165 +1,42 @@
+# GaaS example config. A single email integration to get started.
+# See packages/gaas-email/README.md, packages/gaas-github/README.md,
+# and packages/gaas-gemini/README.md for more config options and examples.
+
 llms:
   default:
     base_url: http://localhost:11434          # Ollama server URL
     model: your-model-name:latest
     parameters:                               # Passed directly to the API
       temperature: 0.7
-  fast:
-    base_url: http://gaming_rig:11434
-    model: your-model-name:latest
-    parameters:
-      temperature: 0.7
-  # Example: external provider with API key
-  # external:
-  #   base_url: https://api.openai.com
-  #   token: !secret openai_api_key
-  #   model: gpt-5-mini-2025-08-07
-  #   parameters:
-  #     max_tokens: 4096
 
 integrations:
   - type: email
     name: personal
     imap_server: imap.example.com
-    imap_port: 993
     username: you@example.com
     password: !secret personal_email_password
     schedule:
       every: 30m
-    llm: fast
+    llm: default
     platforms:
       inbox:
         limit: 50
-        classifications:                        # Optional — defaults are used if omitted
+        classifications:                        # Optional, defaults are used if omitted
           human: is this a personal email written by a human?
-          robot: is this email from an automated system?
           requires_response:
             prompt: does this email require a response?
             type: boolean
-          urgency:
-            prompt: how urgent is this email?
-            type: enum
-            values: [none, low, medium, high, critical]
-          user_agreement_update:
-            prompt: is this email only to tell me that a user agreement has been updated?
-            type: boolean
-        automations:                            # Optional — act on classification results
-          # Non-deterministic: conditions reference classification.*
-          - when:
-              classification.user_agreement_update: true
-            then:
-              - archive
-              - !yolo
-                script:
-                  name: research_tos
-                  inputs:
-                    domain: $domain
-          - when:
-              classification.robot: 0.8         # Confidence >= 0.8
-            then: archive                       # Shorthand for single action
-          - when:
-              classification.human: "> 0.8"
-              classification.urgency: [high, critical]  # Any-of match
-            then:
-              - draft_reply: "I'll review this shortly."
-          # Deterministic: calendar events
+        automations:
+          # Deterministic: archive calendar events (no LLM needed)
           - when:
               is_calendar_event: true
-            then:
-              - archive
-          # Deterministic: conditions reference email properties (no LLM needed)
+            then: archive
+          # LLM-based: archive emails that aren't from a human
           - when:
-              authentication.dkim_pass: true
-              authentication.spf_pass: true
-              domain: work.com
-            then:
-              - draft_reply: "I'll review this shortly."
-          # Override safety: allow irreversible action from LLM classification
-          # (the !yolo tag acknowledges the risk of misclassification)
-          - when:
-              classification.robot: "> 0.95"
-            then:
-              - !yolo unsubscribe
-
-  - type: email
-    name: work
-    imap_server: imap.company.com
-    imap_port: 993
-    username: you@company.com
-    password: !secret work_email_password
-    schedule:
-      cron: "0 8-18 * * 1-5"             # Business hours, weekdays
-    llm: default
-    platforms:
-      inbox:
-        limit: 100
-        classifications:
-          human: is this a personal email written by a human?
-          priority:                             # Extended form for enum types
-            prompt: what is the priority of this email?
-            type: enum
-            values: [low, medium, high, critical]
-          requires_response:
-            prompt: does this email require a response?
-            type: boolean
-
-  - type: github
-    name: my_repos
-    schedule:
-      every: 30m
-    llm: default
-    # orgs: [myorg, anotherorg]       # Restrict to specific GitHub organizations
-    # repos: [myorg/myrepo]           # Restrict to specific repositories (org/repo)
-    platforms:
-      pull_requests:
-        # include_mentions: true      # Also track PRs that mention you (noisy, off by default)
-        classifications:              # Optional — defaults are used if omitted
-          complexity: how complex is this PR to review? 0 = trivial typo fix, 1 = major architectural change
-          risk: how risky is this change? 0 = no risk, 1 = high risk of breaking things
-          documentation_only:
-            prompt: is this primarily a documentation or configuration change?
-            type: boolean
-        # automations:                # Actions will be defined here when available
-        #   - when:
-        #       classification.risk: "> 0.8"
-        #     then: []
-      issues:
-        include_mentions: true        # Track issues that mention you
-        classifications:
-          urgency: how urgently does this issue need attention?
-          actionable:
-            prompt: can you take a concrete next step on this issue?
-            type: boolean
-
-  # Advanced: nightly deep scan with a thorough model
-  # - type: email
-  #   name: personal_nightly
-  #   imap_server: imap.example.com
-  #   imap_port: 993
-  #   username: you@example.com
-  #   password: !secret personal_email_password
-  #   schedule:
-  #     cron: "0 3 * * *"
-  #   llm: default
-  #   platforms:
-  #     inbox:
-  #       limit: 500
-
-scripts:
-  research_tos:
-    description: "Research ToS changes for a domain"
-    inputs: [domain]
-    timeout: 300
-    output: OUTPUT
-    on_output: human_log
-    shell: |
-      log_info "Researching ToS changes for $GAAS_INPUT_DOMAIN"
-      # Replace with actual research logic
-      OUTPUT="ToS review for $GAAS_INPUT_DOMAIN: no significant changes found"
-      log_human "Completed ToS research for $GAAS_INPUT_DOMAIN"
+              classification.human: "< 0.2"
+            then: archive
 
 directories:
   notes: /path/to/notes
   task_queue: /path/to/task_queue
   logs: /path/to/logs
-  # custom_integrations: /path/to/custom_integrations  # User-added integrations (auto-discovered)
