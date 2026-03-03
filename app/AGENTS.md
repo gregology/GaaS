@@ -1,0 +1,112 @@
+# App Architecture
+
+The app runs as two processes: a **FastAPI server** (API + cron scheduler) and a **worker** (task queue consumer). They communicate through the filesystem-based task queue.
+
+## Components
+
+### FastAPI Server (`main.py`)
+
+Endpoints:
+- `GET /` - Health check
+- `GET /integrations` - List configured integrations with their composite IDs and enabled platforms
+- `POST /integrations/{integration_id}/run` - Trigger entry tasks for all enabled platforms
+- `POST /integrations/{integration_id}/{platform}/run` - Trigger entry tasks for a specific platform
+
+The `{integration_id}` is a composite ID in `{type}.{name}` format (e.g. `github.my_repos`), following HA's entity_id pattern. It's a computed property on `BaseIntegrationConfig`, never stored in YAML.
+
+The scheduler (`scheduler.py`) runs inside the FastAPI process, converting `every: 30m` or `cron:` expressions from config into periodic task enqueues. Schedules are created per-platform within each integration.
+
+### Task Queue (`queue.py`)
+
+A filesystem-based priority queue. Tasks are YAML files that move between directories:
+
+```
+data/queue/
+  pending/    # Waiting to be picked up
+  active/     # Currently being processed
+  done/       # Completed successfully
+  failed/     # Failed with error captured
+```
+
+**Why filesystem?** Human-inspectable state is the primary driver. You can `ls` the queue to see what's happening. Secondary benefits: no Redis dependency, low memory footprint.
+
+Key design decisions:
+- **Task IDs**: `{priority}_{timestamp}_{uuid}`, sortable by priority then time
+- **Atomic dequeue**: Uses `os.rename()` which is atomic on POSIX. If another worker grabs the file first, `FileNotFoundError` is caught and `None` returned.
+- **Priority**: 0-9, lower number = higher priority. Dequeue processes lowest-numbered files first via sorted filename listing.
+- **Task conservation**: A task must exist in exactly one directory at all times. Tests verify this invariant with stateful property testing.
+
+### Runtime Init (`runtime_init.py`)
+
+Registers app-level implementations with `gaas_sdk.runtime` at startup. Called from `main.py` and `worker.py` before `load_all_modules()`. Wires up `queue.enqueue`, `config.get_integration`, `config.get_platform`, LLM conversation creation, and notes directory lookup. Tests register via `conftest.py`.
+
+### NoteStore (`store.py` - re-export shim)
+
+Re-exports `NoteStore` from `gaas_sdk.store`. The implementation lives in the SDK package. All persistent data (emails, PRs) uses this pattern:
+
+```yaml
+---
+uid: "12345"
+from_address: sender@example.com
+subject: Hello
+classification:
+  human: 0.85
+  requires_response: true
+---
+(optional body content)
+```
+
+Platform-specific stores (`EmailStore`, `PullRequestStore`, `IssueStore`) wrap `NoteStore` with domain-specific methods. Active notes live in the root directory. Notes no longer requiring attention are moved to `synced/`.
+
+### LLM Abstraction (`llm.py`)
+
+- **`LLMBackend` protocol**: Any object with a `chat()` method works. `LlamaCppBackend` is the default, using the OpenAI-compatible `/v1/chat/completions` endpoint.
+- **`LLMConversation`**: Manages multi-turn conversations. Supports plain text and structured (JSON schema-validated) output with automatic retry (3 attempts).
+- **Backend-agnostic**: Config defines named LLM profiles (`default`, `fast`, etc.) with different `base_url`, `model`, `token`, and `parameters`. Integrations reference profiles by name.
+- **Schema validation**: Uses `jsonschema.Draft202012Validator`. On structured output failure, removes the dangling user message and raises `SchemaValidationError`.
+
+### Human Log (`human_log.py`)
+
+Adds a custom `log.human()` method (level 25, between INFO and WARNING) that appends to daily markdown files at `logs/YYYY-MM-DD DayOfWeek.md`. Uses `O_APPEND` mode for concurrent-safe writes. This is the audit trail.
+
+### Shared Action Layer (`actions/` - partially re-exported)
+
+Cross-cutting actions that can be triggered from any integration's automations. The evaluate phase partitions actions into platform-specific and shared types via `enqueue_actions()`.
+
+- **`actions/__init__.py`**: Re-exports `is_script_action()`, `is_service_action()`, `resolve_script_inputs()`, and `enqueue_actions()` from `gaas_sdk.actions`. The partitioning logic (scripts, services, platform actions) lives in the SDK.
+- **`actions/script.py`**: Script executor. Writes a bash preamble (with `log_human`/`log_info`/`log_warn` helpers) plus the user's shell code to a temp file, runs via `subprocess.run`, processes `\x1e`-delimited log records, captures output. The `handle()` function is the worker handler for `script.run` tasks.
+
+Script actions become individual `script.run` queue tasks. Service actions become individual `service.{domain}.{service_name}` queue tasks. Platform-specific actions are bundled separately. Each type has independent failure tracking in `failed/`.
+
+### Config (`config.py`)
+
+- Loads `config.yaml` eagerly at import time (module-level)
+- Custom `!secret` YAML constructor resolves keys from `secrets.yaml`
+- Dynamic Pydantic models built from manifest config schemas at startup
+- `BaseIntegrationConfig` for shared fields (type, name, schedule, llm) with a computed `id` property (`{type}.{name}`)
+- `BasePlatformConfig` for per-platform fields (classifications, automations)
+- Discriminated union on integration `type` field
+- `get_integration(integration_id)` and `get_platform(integration_id, platform_name)` both take the composite ID
+- Classification shorthand (`"human": "prompt text"`) is normalized to full `ClassificationConfig` via `model_validator`
+- Automation `then` values are normalized from single string or dict to list
+- `ScriptConfig` model for user-defined shell scripts (`description`, `inputs`, `timeout`, `shell`, `output`, `on_output`, `reversible`)
+- `scripts: dict[str, ScriptConfig]` in `AppConfig`
+- `YoloAction` accepts `str | dict`, and `!yolo` works on both scalar and mapping YAML nodes
+- Safety validation flags script actions as irreversible unless `ScriptConfig.reversible` is `True`
+- `_validate_script_references()` warns about automation rules referencing undefined scripts (automations are not disabled — the handler skips unknown scripts at runtime)
+
+### Worker (`worker.py`)
+
+Simple polling loop: dequeue, route to handler by task type string, mark complete or failed. The handler registry lives in `app/integrations/__init__.py`. After `register_all()`, the worker also registers `script.run` for the shared action layer (`app.actions.script.handle`) and service handlers discovered from integration manifests.
+
+Integrations are discovered through three channels: the builtin `app/integrations/` directory, a user-configurable custom integrations directory, and Python entry points (`gaas.integrations` group). Entry-point discovery allows packages under `packages/` to register themselves without being copied into `app/integrations/`.
+
+## Conventions
+
+- Type hints throughout
+- `logging.getLogger(__name__)` in every module
+- Pydantic `BaseModel` for all config/data structures
+- `log.human()` for audit-visible actions, `log.info()` for operational details
+- Context managers for IMAP connections (`with Mailbox(...) as mb:`)
+- Tasks enqueue downstream tasks directly (e.g., `email.inbox.check` enqueues `email.inbox.collect` for each new email)
+- Task type namespace: `{domain}.{platform}.{handler}` (e.g., `github.pull_requests.classify`). Cross-cutting handlers use a flat namespace (e.g., `script.run`).

@@ -195,7 +195,7 @@ cython_debug/
 # AI Agents
 .cursorignore
 .cursorindexingignore
-.claude
+.claude/
 *CLAUDE.md
 
 # Task queue data
