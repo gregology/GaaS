@@ -130,6 +130,3 @@ uv run pytest --cov=app --cov-report=html
 open htmlcov/index.html
 ```
 
-## Feeding results into refactoring
-
-The output from these tools is raw signal. To turn it into actionable refactoring work, use the refactoring prompt in `scratch.refactor_prompt.md`. Run a few of these tools first, paste the interesting findings into context alongside the prompt, and let the analysis weigh the findings against the project's actual priorities and constraints.
