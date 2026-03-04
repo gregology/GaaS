@@ -1,6 +1,9 @@
+import contextlib
 import hashlib
 import json
+import logging
 import os
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +11,8 @@ from pathlib import Path
 import yaml
 
 from app.config import config
+
+log = logging.getLogger(__name__)
 
 BASE_DIR = Path(config.directories.task_queue)
 DIRS = ("pending", "active", "done", "failed")
@@ -20,6 +25,21 @@ def init():
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    """Write content to path atomically via temp file + rename."""
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.rename(tmp_path, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+        raise
 
 
 def fingerprint(payload: dict) -> str:
@@ -113,30 +133,35 @@ def enqueue(payload: dict, priority: int = 5, provenance: str | None = None) -> 
     if provenance is not None:
         task["provenance"] = provenance
     path = BASE_DIR / "pending" / f"{task_id}.yaml"
-    path.write_text(yaml.dump(task, default_flow_style=False, sort_keys=False))
+    _atomic_write(path, yaml.dump(task, default_flow_style=False, sort_keys=False))
     return task_id
 
 
 def dequeue() -> dict | None:
     pending_dir = BASE_DIR / "pending"
     files = sorted(f.name for f in pending_dir.iterdir() if f.suffix == ".yaml")
-    if not files:
-        return None
 
-    filename = files[0]
-    src = pending_dir / filename
-    dst = BASE_DIR / "active" / filename
+    for filename in files:
+        src = pending_dir / filename
+        dst = BASE_DIR / "active" / filename
 
-    try:
-        os.rename(src, dst)
-    except FileNotFoundError:
-        # Another worker grabbed it first
-        return None
+        try:
+            os.rename(src, dst)
+        except FileNotFoundError:
+            continue  # Another worker grabbed it, try next
 
-    task = yaml.safe_load(dst.read_text())
-    task["status"] = "active"
-    dst.write_text(yaml.dump(task, default_flow_style=False, sort_keys=False))
-    return task
+        try:
+            task = yaml.safe_load(dst.read_text())
+        except Exception:
+            log.warning("Corrupted task file %s, moving to failed/", filename)
+            os.rename(dst, BASE_DIR / "failed" / filename)
+            continue
+
+        task["status"] = "active"
+        _atomic_write(dst, yaml.dump(task, default_flow_style=False, sort_keys=False))
+        return task
+
+    return None
 
 
 def complete(task_id: str, result: dict | None = None):
@@ -149,9 +174,9 @@ def complete(task_id: str, result: dict | None = None):
     task["completed_at"] = _now().isoformat()
     if result is not None:
         task["result"] = result
-    src.write_text(yaml.dump(task, default_flow_style=False, sort_keys=False))
-
-    os.rename(src, dst)
+    _atomic_write(dst, yaml.dump(task, default_flow_style=False, sort_keys=False))
+    with contextlib.suppress(FileNotFoundError):
+        src.unlink()
 
 
 def fail(task_id: str, error: str):
@@ -163,6 +188,51 @@ def fail(task_id: str, error: str):
     task["status"] = "failed"
     task["failed_at"] = _now().isoformat()
     task["error"] = error
-    src.write_text(yaml.dump(task, default_flow_style=False, sort_keys=False))
+    _atomic_write(dst, yaml.dump(task, default_flow_style=False, sort_keys=False))
+    with contextlib.suppress(FileNotFoundError):
+        src.unlink()
 
-    os.rename(src, dst)
+
+def recover_stale_active() -> int:
+    """Move stale tasks in active/ to failed/ at startup.
+
+    On a single-host system, any task in active/ at startup was left by a
+    crashed worker. Returns the number of recovered tasks.
+    """
+    active_dir = BASE_DIR / "active"
+    recovered = 0
+
+    for f in sorted(active_dir.iterdir()):
+        if f.suffix != ".yaml":
+            continue
+
+        filename = f.name
+        done_path = BASE_DIR / "done" / filename
+        failed_path = BASE_DIR / "failed" / filename
+
+        # Crash between atomic write to dest and unlink of source
+        if done_path.exists() or failed_path.exists():
+            log.info("Removing duplicate active/ file %s (already in done/ or failed/)", filename)
+            with contextlib.suppress(FileNotFoundError):
+                f.unlink()
+            recovered += 1
+            continue
+
+        # Orphaned task: move to failed with recovery error
+        try:
+            task = yaml.safe_load(f.read_text())
+            task["status"] = "failed"
+            task["failed_at"] = _now().isoformat()
+            task["error"] = "Worker crashed while processing this task"
+            _atomic_write(failed_path, yaml.dump(task, default_flow_style=False, sort_keys=False))
+            with contextlib.suppress(FileNotFoundError):
+                f.unlink()
+        except Exception:
+            log.warning("Corrupted active/ file %s, moving to failed/ as-is", filename)
+            os.rename(f, failed_path)
+
+        recovered += 1
+
+    if recovered:
+        log.info("Recovered %d stale task(s) from active/", recovered)
+    return recovered

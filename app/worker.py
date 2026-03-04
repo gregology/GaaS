@@ -44,6 +44,7 @@ def main():
     HANDLERS["script.run"] = script_run_handle
 
     queue.init()
+    queue.recover_stale_active()
     log.info("Worker started, polling every %ss", POLL_INTERVAL)
 
     while not _shutting_down:
@@ -61,7 +62,10 @@ def main():
             log.info("Completed task %s", task["id"])
         except Exception as exc:
             log.exception("Task %s failed", task["id"])
-            queue.fail(task["id"], str(exc))
+            try:
+                queue.fail(task["id"], str(exc))
+            except Exception:
+                log.exception("Failed to record failure for task %s", task["id"])
 
     log.info("Worker shut down gracefully")
 

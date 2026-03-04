@@ -2,6 +2,7 @@ import hashlib
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 from hypothesis import settings as hp_settings
@@ -213,3 +214,127 @@ class QueueStateMachine(RuleBasedStateMachine):
 
 TestQueueStateMachine = QueueStateMachine.TestCase
 TestQueueStateMachine.settings = hp_settings(max_examples=50, stateful_step_count=20)
+
+
+class TestAtomicWrites:
+    def test_enqueue_no_partial_file_on_error(self, queue_dir):
+        """If os.rename fails after temp write, no .yaml file is left in pending/."""
+        with patch("app.queue.os.rename", side_effect=OSError("disk full")):
+            try:
+                queue.enqueue({"type": "test"})
+            except OSError:
+                pass
+
+        yaml_files = list((queue_dir / "pending").glob("*.yaml"))
+        tmp_files = list((queue_dir / "pending").glob("*.tmp"))
+        assert yaml_files == []
+        assert tmp_files == []
+
+    def test_complete_atomic(self, queue_dir):
+        """Completed task lands in done/ with correct content."""
+        queue.enqueue({"type": "test"})
+        task = queue.dequeue()
+        queue.complete(task["id"], result={"answer": 42})
+
+        done_file = queue_dir / "done" / f"{task['id']}.yaml"
+        done_task = yaml.safe_load(done_file.read_text())
+        assert done_task["status"] == "done"
+        assert done_task["result"] == {"answer": 42}
+        assert "completed_at" in done_task
+        assert not (queue_dir / "active" / f"{task['id']}.yaml").exists()
+
+    def test_fail_atomic(self, queue_dir):
+        """Failed task lands in failed/ with correct content."""
+        queue.enqueue({"type": "test"})
+        task = queue.dequeue()
+        queue.fail(task["id"], "kaboom")
+
+        failed_file = queue_dir / "failed" / f"{task['id']}.yaml"
+        failed_task = yaml.safe_load(failed_file.read_text())
+        assert failed_task["status"] == "failed"
+        assert failed_task["error"] == "kaboom"
+        assert "failed_at" in failed_task
+        assert not (queue_dir / "active" / f"{task['id']}.yaml").exists()
+
+
+class TestDequeueCorruptedFiles:
+    def test_dequeue_skips_corrupted_file(self, queue_dir):
+        """Corrupted YAML in pending/ moves to failed/, next valid task returned."""
+        # Write a corrupted file that sorts first (priority 0)
+        corrupted = queue_dir / "pending" / "0_20260101T000000Z_aaaaaaaa--bbbbbbbb--bad.yaml"
+        corrupted.write_text("{{{{not valid yaml: [")
+
+        # Enqueue a valid task (default priority 5, so sorts after)
+        valid_id = queue.enqueue({"type": "good"})
+
+        task = queue.dequeue()
+        assert task is not None
+        assert task["payload"]["type"] == "good"
+
+        # Corrupted file moved to failed/
+        assert not corrupted.exists()
+        assert (queue_dir / "failed" / corrupted.name).exists()
+
+
+class TestRecoverStaleActive:
+    def test_recover_stale_active_empty(self, queue_dir):
+        """No tasks in active/ → no-op, returns 0."""
+        assert queue.recover_stale_active() == 0
+
+    def test_recover_stale_active_orphaned_task(self, queue_dir):
+        """Task only in active/ → moved to failed/ with recovery error."""
+        queue.enqueue({"type": "test"})
+        task = queue.dequeue()
+        task_id = task["id"]
+
+        # Simulate startup: task stuck in active/
+        recovered = queue.recover_stale_active()
+        assert recovered == 1
+        assert not (queue_dir / "active" / f"{task_id}.yaml").exists()
+
+        failed_file = queue_dir / "failed" / f"{task_id}.yaml"
+        failed_task = yaml.safe_load(failed_file.read_text())
+        assert failed_task["status"] == "failed"
+        assert "crashed" in failed_task["error"].lower()
+
+    def test_recover_stale_active_duplicate_in_done(self, queue_dir):
+        """Task in active/ + done/ → active/ copy removed."""
+        queue.enqueue({"type": "test"})
+        task = queue.dequeue()
+        task_id = task["id"]
+        filename = f"{task_id}.yaml"
+
+        # Simulate crash between atomic write to done/ and unlink of active/
+        done_path = queue_dir / "done" / filename
+        done_path.write_text(yaml.dump({**task, "status": "done"}))
+
+        recovered = queue.recover_stale_active()
+        assert recovered == 1
+        assert not (queue_dir / "active" / filename).exists()
+        assert done_path.exists()
+
+    def test_recover_stale_active_duplicate_in_failed(self, queue_dir):
+        """Task in active/ + failed/ → active/ copy removed."""
+        queue.enqueue({"type": "test"})
+        task = queue.dequeue()
+        task_id = task["id"]
+        filename = f"{task_id}.yaml"
+
+        # Simulate crash between atomic write to failed/ and unlink of active/
+        failed_path = queue_dir / "failed" / filename
+        failed_path.write_text(yaml.dump({**task, "status": "failed"}))
+
+        recovered = queue.recover_stale_active()
+        assert recovered == 1
+        assert not (queue_dir / "active" / filename).exists()
+        assert failed_path.exists()
+
+    def test_recover_stale_active_corrupted(self, queue_dir):
+        """Unparseable YAML in active/ → moved to failed/ as-is."""
+        corrupted = queue_dir / "active" / "0_20260101T000000Z_aaaaaaaa--bbbbbbbb--bad.yaml"
+        corrupted.write_text("{{{{not valid yaml: [")
+
+        recovered = queue.recover_stale_active()
+        assert recovered == 1
+        assert not corrupted.exists()
+        assert (queue_dir / "failed" / corrupted.name).exists()
