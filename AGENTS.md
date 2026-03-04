@@ -178,7 +178,7 @@ uv run lint-imports                                    # Architectural boundary 
 uv run pytest --cov=app --cov-report=term-missing -v   # Test coverage
 ```
 
-When to use these: before refactors, after extracting or removing code, or as periodic sweeps. Not every commit. The output is signal for human judgment, not a checklist. See `scratch.refactor_prompt.md` for a structured prompt that turns tool output into prioritized refactoring recommendations.
+When to use these: before refactors, after extracting or removing code, or as periodic sweeps. Not every commit. The output is signal for human judgment, not a checklist.
 
 Key tools for this codebase:
 - **import-linter** enforces the SDK boundary (integrations must not import `app.*`). Config lives in `pyproject.toml` under `[tool.importlinter]`.
