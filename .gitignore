@@ -209,3 +209,6 @@ cron_state.db*
 
 # Supervisor restart sentinel
 .gaas-restart
+
+# Refactoring audit output
+to_review/
