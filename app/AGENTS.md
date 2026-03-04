@@ -31,15 +31,23 @@ data/queue/
 **Why filesystem?** Human-inspectable state is the primary driver. You can `ls` the queue to see what's happening. Secondary benefits: no Redis dependency, low memory footprint.
 
 Key design decisions:
-- **Task IDs**: `{priority}_{timestamp}_{uuid}`, sortable by priority then time
+- **Task IDs**: `{priority}_{timestamp}_{uuid}--{fingerprint}--{task_type}`, sortable by priority then time. The `--` separated suffix enables zero-YAML-parsing policy checks (dedup via fingerprint glob, rate limiting via task_type glob + timestamp extraction).
 - **Atomic dequeue**: Uses `os.rename()` which is atomic on POSIX. If another worker grabs the file first, `FileNotFoundError` is caught and `None` returned.
 - **Priority**: 0-9, lower number = higher priority. Dequeue processes lowest-numbered files first via sorted filename listing.
 - **Task conservation**: A task must exist in exactly one directory at all times. Tests verify this invariant with stateful property testing.
 - **Result capture**: `complete()` accepts an optional `result` dict. When present, it's stored in the completed task YAML alongside `completed_at`. Service handlers return result dicts; platform handlers return None.
 
+### Queue Policies (`queue_policy.py`)
+
+Wraps `queue.enqueue()` with config-driven dedup and rate limiting. `resolve_policy()` looks up the effective policy for a task type (override or default from `config.queue_policies`). `policy_enqueue()` runs the checks and either calls through to `queue.enqueue()` or returns `None` with an info log.
+
+Dedup globs for `*--{fingerprint}--{task_type}.yaml` in `pending/`. Rate limiting globs for `*--*--{task_type}.yaml` across all dirs and filters by timestamp extracted from the filename. Both work without parsing any YAML.
+
+Manual API triggers (`POST /integrations/.../run`) call `queue.enqueue()` directly, bypassing policies. The scheduler and `runtime.enqueue()` (used by automation-driven code) go through `policy_enqueue()`.
+
 ### Runtime Init (`runtime_init.py`)
 
-Registers app-level implementations with `gaas_sdk.runtime` at startup. Called from `main.py` and `worker.py` before `load_all_modules()`. Wires up `queue.enqueue`, `config.get_integration`, `config.get_platform`, LLM conversation creation, and notes directory lookup. Tests register via `conftest.py`.
+Registers app-level implementations with `gaas_sdk.runtime` at startup. Called from `main.py` and `worker.py` before `load_all_modules()`. Wires up `policy_enqueue` (config-driven dedup + rate limiting wrapper around `queue.enqueue`), `config.get_integration`, `config.get_platform`, LLM conversation creation, and notes directory lookup. Tests register via `conftest.py`.
 
 ### NoteStore (`store.py` - re-export shim)
 
@@ -94,7 +102,10 @@ Script actions become individual `script.run` queue tasks. Service actions becom
 - `scripts: dict[str, ScriptConfig]` in `AppConfig`
 - `YoloAction` accepts `str | dict`, and `!yolo` works on both scalar and mapping YAML nodes
 - Safety validation flags script actions as irreversible unless `ScriptConfig.reversible` is `True`
-- `_validate_script_references()` warns about automation rules referencing undefined scripts (automations are not disabled — the handler skips unknown scripts at runtime)
+- `_validate_script_references()` warns about automation rules referencing undefined scripts (automations are not disabled -- the handler skips unknown scripts at runtime)
+- `QueuePolicyConfig` with `defaults` (`TaskPolicyConfig`) and per-type `overrides` dict
+- `TaskPolicyConfig`: `deduplicate_pending` (bool, default true) and optional `rate_limit` (`RateLimitConfig` with `max` int and `per` duration string)
+- `queue_policies: QueuePolicyConfig = QueuePolicyConfig()` in `AppConfig` -- defaults mean no behavior change for existing configs
 
 ### Result Routes (`result_routes.py`)
 

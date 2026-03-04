@@ -10,12 +10,13 @@ import gaas_sdk.runtime
 from app import queue
 from app.config import config
 from app.llm import LLMConversation
+from app.queue_policy import policy_enqueue
 
 
 def register_runtime() -> None:
     """Wire up app implementations to the SDK runtime slots."""
     gaas_sdk.runtime.register(
-        enqueue=queue.enqueue,
+        enqueue=policy_enqueue,
         get_integration=config.get_integration,
         get_platform=config.get_platform,
         create_llm_conversation=lambda model="default", system=None: LLMConversation(model, system),

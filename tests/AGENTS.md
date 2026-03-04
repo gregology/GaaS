@@ -103,8 +103,9 @@ CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sy
 tests/
   conftest.py                           # Fixtures
   test_actions.py                       # Shared action partitioning, input resolution
-  test_config.py                        # YoloAction tag handling, ScriptConfig
+  test_config.py                        # YoloAction tag handling, ScriptConfig, QueuePolicyConfig
   test_queue.py                         # Queue lifecycle + stateful property tests
+  test_queue_policy.py                  # Dedup, rate limiting, fingerprint, policy resolution
   test_llm.py                           # LLM conversation, schema validation
   test_loader.py                        # Manifest parsing, discovery, dynamic models
   test_result_routes.py                 # Service result routing (note persistence, custom paths, fallbacks)

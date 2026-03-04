@@ -20,7 +20,7 @@ class RuntimeNotRegistered(RuntimeError):
         )
 
 
-_enqueue: Callable[..., str] | None = None
+_enqueue: Callable[..., str | None] | None = None
 _get_integration: Callable[[str], Any] | None = None
 _get_platform: Callable[[str, str], Any] | None = None
 _create_llm_conversation: Callable[..., Any] | None = None
@@ -30,7 +30,7 @@ _get_notes_dir: Callable[[], Any] | None = None
 
 def register(
     *,
-    enqueue: Callable[..., str],
+    enqueue: Callable[..., str | None],
     get_integration: Callable[[str], Any],
     get_platform: Callable[[str, str], Any],
     create_llm_conversation: Callable[..., Any],
@@ -51,7 +51,7 @@ def register(
     _get_notes_dir = get_notes_dir
 
 
-def enqueue(payload: dict, priority: int = 5, provenance: str | None = None) -> str:
+def enqueue(payload: dict, priority: int = 5, provenance: str | None = None) -> str | None:
     if _enqueue is None:
         raise RuntimeNotRegistered("enqueue")
     return _enqueue(payload, priority=priority, provenance=provenance)

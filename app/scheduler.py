@@ -6,8 +6,8 @@ import re
 from fastapi import FastAPI
 from fastapi_crons import Crons
 
-from app import queue
 from app.config import config
+from app.queue_policy import policy_enqueue
 from app.integrations import ENTRY_TASKS
 
 log = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ def init_schedules(app: FastAPI) -> Crons:
                         "platform": plat_name,
                     }
                     log.info("Scheduled job: enqueueing %s", payload)
-                    queue.enqueue(payload)
+                    policy_enqueue(payload)
                 return job
 
             crons.cron(expr, name=name)(make_job())

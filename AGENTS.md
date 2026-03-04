@@ -119,6 +119,7 @@ app/
   config.py        # YAML config + !secret references, dynamic Pydantic models
   loader.py        # Integration discovery (builtin dir, custom dir, entry points)
   queue.py         # Filesystem-based task queue
+  queue_policy.py  # Config-driven dedup + rate limiting (wraps queue.enqueue)
   worker.py        # Task worker polling loop, result capture + routing
   result_routes.py # Service result routing (note persistence, human log breadcrumb)
   supervisor.py    # Process supervisor (manages server + worker)
@@ -147,6 +148,7 @@ Config uses Home Assistant-inspired YAML with `!secret` references to a separate
 - **Schedule formats**: `every: 30m` or `cron: "0 8-18 * * 1-5"`
 - **Multiple LLM profiles**: Define `default`, `fast`, etc. with different backends/models
 - **Scripts**: User-defined shell scripts in `scripts:` section, triggered from automation rules as a cross-cutting action type
+- **Queue policies**: `queue_policies:` section with `defaults` and per-type `overrides` for dedup and rate limiting
 
 Both `config.yaml` and `secrets.yaml` are gitignored. Tests create a minimal config automatically via `conftest.py`.
 

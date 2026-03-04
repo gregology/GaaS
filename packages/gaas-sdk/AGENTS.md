@@ -26,7 +26,7 @@ Now integrations call `gaas_sdk.runtime.enqueue()`, `runtime.get_integration()`,
 
 Available runtime functions:
 
-- `enqueue(payload, priority=5, provenance=None)` - queue a task
+- `enqueue(payload, priority=5, provenance=None)` - queue a task (returns `str | None` -- `None` when rejected by policy)
 - `get_integration(integration_id)` - look up integration config by composite ID
 - `get_platform(integration_id, platform_name)` - look up platform config
 - `create_llm_conversation(model, system)` - create an LLM conversation instance

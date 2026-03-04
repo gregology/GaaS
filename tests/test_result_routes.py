@@ -18,7 +18,7 @@ def _make_task(task_type="service.gemini.web_research", **payload_extra):
     }
     payload.update(payload_extra)
     return {
-        "id": "7_20260303T142532Z_a1b2c3d4",
+        "id": "7_20260303T142532Z_a1b2c3d4--deadbeef--service.gemini.web_research",
         "payload": payload,
     }
 
@@ -54,7 +54,7 @@ class TestRouteResults:
         """Non-service tasks without on_result are silently skipped."""
         result = {"actions": ["archive"]}
         task = {
-            "id": "7_20260303T142532Z_a1b2c3d4",
+            "id": "7_20260303T142532Z_a1b2c3d4--abcd1234--email.inbox.act",
             "payload": {"type": "email.inbox.act"},
         }
 
@@ -222,6 +222,26 @@ class TestRouteNote:
         with patch("app.result_routes.runtime.get_notes_dir", return_value=notes_dir):
             filepath = _route_note(result, task, route_config)
 
-        # Filename should contain the short ID from the task
+        # Filename should contain the short UUID (from prefix before --)
         assert "a1b2c3d4" in filepath.name
         assert filepath.suffix == ".md"
+
+    def test_short_id_extraction_new_format(self, notes_dir):
+        """short_id is extracted from the UUID portion, not the fingerprint or task type."""
+        result = {"text": "test", "sources": []}
+        task = {
+            "id": "5_20260303T142532Z_beef1234--deadbeef--service.gemini.web_research",
+            "payload": {
+                "type": "service.gemini.web_research",
+                "integration": "gemini.default",
+                "inputs": {"prompt": "test"},
+            },
+        }
+        route_config = {"type": "note"}
+
+        with patch("app.result_routes.runtime.get_notes_dir", return_value=notes_dir):
+            filepath = _route_note(result, task, route_config)
+
+        # Should extract "beef1234" (uuid), not "deadbeef" (fingerprint)
+        assert "beef1234" in filepath.name
+        assert "deadbeef" not in filepath.name

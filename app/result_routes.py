@@ -80,7 +80,8 @@ def _route_note(result: dict, task: dict, route_config: dict) -> Path:
     now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y_%m_%d__%H_%M_%S")
     task_id = task.get("id", "unknown")
-    short_id = task_id.rsplit("_", 1)[-1] if "_" in task_id else task_id[:8]
+    prefix = task_id.split("--")[0] if "--" in task_id else task_id
+    short_id = prefix.rsplit("_", 1)[-1] if "_" in prefix else prefix[:8]
     filename = f"{timestamp}__{short_id}.md"
 
     # Separate text body from metadata fields

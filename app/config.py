@@ -107,6 +107,21 @@ class DirectoriesConfig(BaseModel):
     custom_integrations: Path | None = None
 
 
+class RateLimitConfig(BaseModel):
+    max: int
+    per: str  # "30m", "1h", "1d"
+
+
+class TaskPolicyConfig(BaseModel):
+    deduplicate_pending: bool = True
+    rate_limit: RateLimitConfig | None = None
+
+
+class QueuePolicyConfig(BaseModel):
+    defaults: TaskPolicyConfig = TaskPolicyConfig()
+    overrides: dict[str, TaskPolicyConfig] = {}
+
+
 # ---------------------------------------------------------------------------
 # Dynamic model construction from manifests
 # ---------------------------------------------------------------------------
@@ -441,6 +456,7 @@ def load_config(config_path: Path = _CONFIG_PATH) -> tuple:
         integrations: list[Integration] = []
         directories: DirectoriesConfig = DirectoriesConfig()
         scripts: dict[str, ScriptConfig] = {}
+        queue_policies: QueuePolicyConfig = QueuePolicyConfig()
 
         @model_validator(mode="after")
         def _check_unique_names(self):
