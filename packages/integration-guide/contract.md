@@ -26,7 +26,6 @@ packages/gaas-{domain}/
         templates/
           classify.jinja          # Prompt template
   tests/
-    __init__.py
     test_*.py
 ```
 
@@ -43,11 +42,12 @@ packages/gaas-{domain}/
       __init__.py
       {service_name}.py           # Service handler
   tests/
-    __init__.py
     test_*.py
 ```
 
-The `__init__.py` files can be empty. Handler loading goes through the manifest, not through Python imports from `__init__`.
+No `__init__.py` in test directories. pytest uses `--import-mode=importlib` and discovers tests without them. Putting one in would cause mypy to choke on duplicate `tests` modules across packages.
+
+The source `__init__.py` files can be empty. Handler loading goes through the manifest, not through Python imports from `__init__`.
 
 ## pyproject.toml
 

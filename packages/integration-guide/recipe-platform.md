@@ -28,7 +28,6 @@ packages/gaas-slack/
         templates/
           classify.jinja
   tests/
-    __init__.py
 ```
 
 ## Step 2: Write pyproject.toml

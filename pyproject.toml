@@ -61,7 +61,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 warn_return_any = true
 warn_unused_configs = true
-exclude = ["packages/gaas-gemini/"]
+exclude = ["packages/gaas-gemini/", "packages/.*/tests/"]
 explicit_package_bases = true
 mypy_path = ["packages/gaas-sdk/src", "packages/gaas-email/src"]
 
