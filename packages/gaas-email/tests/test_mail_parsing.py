@@ -19,6 +19,7 @@ def _make_email(
     list_unsubscribe_post: str = "",
     flags: tuple = (),
     attachments: list | None = None,
+    from_: str = "sender@example.com",
 ) -> Email:
     """Build a minimal Email object for testing flag properties."""
     msg = MagicMock()
@@ -32,7 +33,7 @@ def _make_email(
         "list-unsubscribe": (list_unsubscribe,) if list_unsubscribe else (),
         "list-unsubscribe-post": (list_unsubscribe_post,) if list_unsubscribe_post else (),
     }
-    msg.from_ = "sender@example.com"
+    msg.from_ = from_
     msg.from_values = None
     msg.to = ["recipient@example.com"]
     msg.subject = subject
@@ -415,6 +416,29 @@ class TestIsForward:
 
     def test_subject_containing_fwd_not_prefix(self):
         assert _make_email("Notes about fwd: policy").is_forward is False
+
+
+# ---------------------------------------------------------------------------
+# Email.root_domain
+# ---------------------------------------------------------------------------
+
+
+class TestRootDomain:
+    def test_subdomain_stripped(self):
+        email = _make_email(from_="user@mail.company.com")
+        assert email.root_domain == "company.com"
+
+    def test_multi_part_tld_co_uk(self):
+        email = _make_email(from_="user@mail.company.co.uk")
+        assert email.root_domain == "company.co.uk"
+
+    def test_no_subdomain(self):
+        email = _make_email(from_="user@company.com")
+        assert email.root_domain == "company.com"
+
+    def test_multi_part_tld_com_au(self):
+        email = _make_email(from_="user@sub.example.com.au")
+        assert email.root_domain == "example.com.au"
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,12 @@ class Email:
         return d.lower()
 
     @property
+    def root_domain(self) -> str:
+        import tldextract
+        ext = tldextract.extract(self.from_address)
+        return f"{ext.domain}.{ext.suffix}".lower() if ext.suffix else ext.domain.lower()
+
+    @property
     def is_noreply(self) -> bool:
         return bool(_NOREPLY_RE.match(self.from_address))
 
