@@ -7,6 +7,7 @@ from email.policy import EmailPolicy
 from email.utils import parsedate_to_datetime
 
 import httpx
+import tldextract
 from bs4 import BeautifulSoup
 from icalendar import Calendar
 from imap_tools import AND, MailBox as IMAPToolsMailBox, MailMessage
@@ -21,6 +22,8 @@ _NOREPLY_RE = re.compile(
 )
 
 _FORWARD_RE = re.compile(r"^\s*(fwd?:|fw:|\[fwd?:)", re.IGNORECASE)
+
+_tld_extractor = tldextract.TLDExtract(suffix_list_urls=None)
 
 
 class Email:
@@ -61,6 +64,11 @@ class Email:
     def domain(self) -> str:
         _, _, d = self.from_address.partition("@")
         return d.lower()
+
+    @property
+    def root_domain(self) -> str:
+        ext = _tld_extractor(self.domain)
+        return ext.top_domain_under_public_suffix.lower() or self.domain
 
     @property
     def is_noreply(self) -> bool:

@@ -19,6 +19,7 @@ def _make_email(
     list_unsubscribe_post: str = "",
     flags: tuple = (),
     attachments: list | None = None,
+    from_address: str = "sender@example.com",
 ) -> Email:
     """Build a minimal Email object for testing flag properties."""
     msg = MagicMock()
@@ -32,7 +33,7 @@ def _make_email(
         "list-unsubscribe": (list_unsubscribe,) if list_unsubscribe else (),
         "list-unsubscribe-post": (list_unsubscribe_post,) if list_unsubscribe_post else (),
     }
-    msg.from_ = "sender@example.com"
+    msg.from_ = from_address
     msg.from_values = None
     msg.to = ["recipient@example.com"]
     msg.subject = subject
@@ -505,3 +506,52 @@ class TestHasAttachments:
             self._att("application/pdf"),
         ])
         assert email.has_attachments is True
+
+
+# ---------------------------------------------------------------------------
+# Email.root_domain
+# ---------------------------------------------------------------------------
+
+
+class TestRootDomain:
+    def test_simple_domain(self):
+        email = _make_email(from_address="user@example.com")
+        assert email.root_domain == "example.com"
+
+    def test_subdomain(self):
+        email = _make_email(from_address="no-reply@mail.company.com")
+        assert email.root_domain == "company.com"
+
+    def test_co_uk(self):
+        email = _make_email(from_address="info@company.co.uk")
+        assert email.root_domain == "company.co.uk"
+
+    def test_subdomain_co_uk(self):
+        email = _make_email(from_address="no-reply@mail.company.co.uk")
+        assert email.root_domain == "company.co.uk"
+
+    def test_com_au(self):
+        email = _make_email(from_address="hello@shop.com.au")
+        assert email.root_domain == "shop.com.au"
+
+    def test_subdomain_com_au(self):
+        email = _make_email(from_address="noreply@mail.shop.com.au")
+        assert email.root_domain == "shop.com.au"
+
+    def test_deeply_nested_subdomain(self):
+        email = _make_email(from_address="bot@a.b.c.example.com")
+        assert email.root_domain == "example.com"
+
+    def test_lowercased(self):
+        email = _make_email(from_address="user@Mail.Example.COM")
+        assert email.root_domain == "example.com"
+
+    def test_bare_hostname_fallback(self):
+        """Bare hostnames without a valid TLD fall back to the full domain."""
+        email = _make_email(from_address="admin@localhost")
+        assert email.root_domain == "localhost"
+
+    def test_no_at_sign_fallback(self):
+        """Addresses without '@' produce an empty domain; root_domain falls back."""
+        email = _make_email(from_address="invalid-address")
+        assert email.root_domain == ""

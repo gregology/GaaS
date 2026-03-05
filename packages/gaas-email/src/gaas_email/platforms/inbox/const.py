@@ -36,6 +36,7 @@ DETERMINISTIC_SOURCES: frozenset[str] = frozenset({
     "is_reply",
     "is_starred",
     "is_unsubscribable",
+    "root_domain",
 })
 
 # Actions that cannot be undone. Automations that would trigger these from
