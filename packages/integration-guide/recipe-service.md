@@ -21,7 +21,6 @@ packages/gaas-todoist/
       __init__.py
       create_task.py
   tests/
-    __init__.py
     test_create_task.py
 ```
 

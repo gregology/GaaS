@@ -61,6 +61,6 @@ Both platforms are read-only right now. When write actions are added, categorize
 
 ## Tests
 
-Currently only `tests/__init__.py`. Tests for the GitHub integration live in the main test suite under `tests/safety/` (provenance and automation invariant tests cover GitHub's safety constants).
+Package-specific tests live in `packages/gaas-github/tests/` and import from `gaas_sdk.*` directly. Safety invariant tests (provenance, automation constants) live in the main `tests/safety/` directory.
 
-When adding GitHub-specific tests, put them in `packages/gaas-github/tests/` and import from `gaas_sdk.*` directly.
+No `__init__.py` in the test directory. pytest discovers tests via `--import-mode=importlib`, and skipping `__init__.py` avoids a mypy duplicate-module collision with other packages that also have a `tests/` directory.
