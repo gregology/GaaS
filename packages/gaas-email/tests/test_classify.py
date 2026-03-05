@@ -1,3 +1,5 @@
+import tldextract
+
 from gaas_sdk.classify import build_schema
 from gaas_sdk.models import AutomationConfig, ClassificationConfig, DictAction, SimpleAction
 from gaas_sdk.evaluate import (
@@ -38,6 +40,11 @@ class _MockEmail:
     def domain(self):
         _, _, d = self.from_address.partition("@")
         return d.lower()
+
+    @property
+    def root_domain(self):
+        extracted = tldextract.extract(self.domain)
+        return f"{extracted.domain}.{extracted.suffix}".lower()
 
     @property
     def is_noreply(self):
@@ -249,6 +256,12 @@ class TestConditionsMatch:
         when = {"domain": "work.com"}
         assert conditions_match(when, resolver, {}, CLASSIFICATIONS) is True
         assert conditions_match({"domain": "other.com"}, resolver, {}, CLASSIFICATIONS) is False
+
+    def test_root_domain_condition(self):
+        email = _MockEmail(from_address="user@mail.company.com")
+        resolver = _make_email_resolver(email)
+        assert conditions_match({"root_domain": "company.com"}, resolver, {}, CLASSIFICATIONS) is True
+        assert conditions_match({"root_domain": "other.com"}, resolver, {}, CLASSIFICATIONS) is False
 
     def test_authentication_condition(self):
         email = _MockEmail(authentication={"dkim_pass": True, "spf_pass": False})

@@ -505,3 +505,45 @@ class TestHasAttachments:
             self._att("application/pdf"),
         ])
         assert email.has_attachments is True
+
+
+# ---------------------------------------------------------------------------
+# Email.root_domain
+# ---------------------------------------------------------------------------
+
+
+class TestRootDomain:
+    def _make_email_with_from(self, from_address: str) -> Email:
+        msg = MagicMock()
+        msg.uid = "1"
+        msg.headers = {
+            "message-id": ("<test@example.com>",),
+            "references": (),
+            "in-reply-to": ("",),
+            "received": (),
+            "authentication-results": ("none",),
+            "list-unsubscribe": (),
+            "list-unsubscribe-post": (),
+        }
+        msg.from_ = from_address
+        msg.from_values = None
+        msg.to = ["recipient@example.com"]
+        msg.subject = "Hello"
+        msg.date = datetime.now(UTC)
+        msg.text = ""
+        msg.html = ""
+        msg.flags = ()
+        msg.attachments = []
+        return Email(msg, MagicMock())
+
+    def test_simple_domain(self):
+        email = self._make_email_with_from("user@example.com")
+        assert email.root_domain == "example.com"
+
+    def test_subdomain(self):
+        email = self._make_email_with_from("user@mail.company.com")
+        assert email.root_domain == "company.com"
+
+    def test_multi_part_tld(self):
+        email = self._make_email_with_from("user@mail.company.co.uk")
+        assert email.root_domain == "company.co.uk"

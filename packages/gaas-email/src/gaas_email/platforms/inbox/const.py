@@ -27,6 +27,7 @@ DETERMINISTIC_SOURCES: frozenset[str] = frozenset({
     "calendar",
     "domain",
     "from_address",
+    "root_domain",
     "has_attachments",
     "is_answered",
     "is_calendar_event",
