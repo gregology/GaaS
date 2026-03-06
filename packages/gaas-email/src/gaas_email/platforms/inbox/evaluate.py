@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 import frontmatter
 
@@ -12,6 +13,7 @@ from gaas_sdk.evaluate import (
     unwrap_actions,
 )
 from gaas_sdk.task import TaskRecord
+from ...config_types import EmailConfig, InboxPlatformConfig
 from .const import DEFAULT_CLASSIFICATIONS, DETERMINISTIC_SOURCES
 from .store import EmailStore
 
@@ -87,8 +89,8 @@ def _make_resolver(snapshot: EmailSnapshot):
 
 def handle(task: TaskRecord):
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
-    platform = runtime.get_platform(integration_id, "inbox")
+    integration = cast(EmailConfig, runtime.get_integration(integration_id))
+    platform = cast(InboxPlatformConfig, runtime.get_platform(integration_id, "inbox"))
     message_id = task["payload"]["message_id"]
     log.info("email.inbox.evaluate: message_id=%s (integration=%s)", message_id, integration_id)
 

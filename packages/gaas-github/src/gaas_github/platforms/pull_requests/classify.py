@@ -4,6 +4,7 @@ import logging
 import secrets
 from datetime import datetime, UTC
 from pathlib import Path
+from typing import cast
 
 import frontmatter
 
@@ -12,6 +13,7 @@ from gaas_sdk.classify import build_schema, make_jinja_env
 from gaas_sdk.models import ClassificationConfig
 from gaas_sdk.task import TaskRecord
 
+from ...config_types import GitHubConfig, GitHubPlatformConfig
 from .const import DEFAULT_CLASSIFICATIONS
 from .store import PullRequestStore
 
@@ -48,8 +50,8 @@ def handle(task: TaskRecord):
     from ...client import GitHubClient
 
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
-    platform = runtime.get_platform(integration_id, "pull_requests")
+    integration = cast(GitHubConfig, runtime.get_integration(integration_id))
+    platform = cast(GitHubPlatformConfig, runtime.get_platform(integration_id, "pull_requests"))
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]

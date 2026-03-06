@@ -356,6 +356,12 @@ Config schemas in `manifest.yaml` are JSON Schema. At startup, `build_integratio
 
 Why: custom integrations can define their own config fields without modifying core code. The dynamic model approach means adding a new integration type is a YAML change, not a Python change.
 
+### Typed Protocols for integration config access
+
+`runtime.get_integration()` returns `BaseIntegrationConfig`, but integration handlers access dynamically-added fields like `integration.imap_server`. Each integration package defines a typed Protocol in `config_types.py` describing its expected config shape, and uses `cast()` at the boundary. For example, `cast(EmailConfig, runtime.get_integration(id))`. The cast is a no-op at runtime — the dynamic models already have the right fields, this just tells mypy about them.
+
+Why: without this, all integration code is effectively untyped at the config-access boundary. mypy can't catch typos in field names, IDE autocomplete doesn't work, and the 20+ mypy errors from "BaseIntegrationConfig has no attribute X" create a broken-windows effect that masks real type issues. The Protocol mirrors the manifest's `config_schema` — if manifest and Protocol drift, mypy catches the mismatch at every usage site, which is exactly the kind of error the Protocols are designed to surface.
+
 ### Integration isolation over shared abstractions
 
 Each integration owns its pipeline stages. `evaluate.py`, `classify.py`, `act.py` -- each lives inside the integration package with platform-specific logic (snapshot construction, prompt rendering, action execution, value resolution).

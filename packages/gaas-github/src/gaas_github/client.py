@@ -6,6 +6,8 @@ import subprocess
 import time
 from collections.abc import Callable
 
+from .config_types import GitHubConfig, GitHubPlatformConfig
+
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
@@ -66,7 +68,7 @@ class GitHubClient:
         ]
         return self._run_gh(cmd, timeout=60)
 
-    def active_prs(self, integration, platform) -> list[dict]:
+    def active_prs(self, integration: GitHubConfig, platform: GitHubPlatformConfig) -> list[dict]:
         """Fetch all open PRs currently requiring the user's attention."""
         base_queries = [
             "is:pr is:open assignee:@me",
@@ -106,7 +108,7 @@ class GitHubClient:
             "comment_count": result.get("comments", 0),
         }
 
-    def active_issues(self, integration, platform) -> list[dict]:
+    def active_issues(self, integration: GitHubConfig, platform: GitHubPlatformConfig) -> list[dict]:
         """Fetch all open issues currently requiring the user's attention."""
         base_queries = [
             "is:issue is:open assignee:@me",
@@ -125,7 +127,7 @@ class GitHubClient:
     def _search_entities(
         self,
         base_queries: list[str],
-        integration,
+        integration: GitHubConfig,
         item_filter: Callable[[dict], bool] | None = None,
     ) -> list[dict]:
         """Execute search queries and return deduplicated entity dicts.
@@ -169,7 +171,7 @@ class GitHubClient:
         log.info("_search_raw(%r): found %d results", query, len(entities))
         return entities
 
-    def _scope_qualifiers(self, integration) -> list[str]:
+    def _scope_qualifiers(self, integration: GitHubConfig) -> list[str]:
         """Build scope qualifiers from the integration's org/repo config."""
         qualifiers = []
         for org in (integration.orgs or []):

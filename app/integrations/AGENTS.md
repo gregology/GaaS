@@ -85,6 +85,7 @@ The result is also stored in the completed task YAML in `done/` regardless of ro
 my_integration/
   manifest.yaml     # Required: metadata + config schema + platforms + services
   __init__.py        # Required: exports HANDLERS dict (aggregated from platforms)
+  config_types.py    # Recommended: typed Protocols for config access (cast at boundary)
   client.py          # Optional: shared API client used by all platforms
   platforms/
     __init__.py

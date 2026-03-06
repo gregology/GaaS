@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from gaas_sdk import runtime
 from gaas_sdk.task import TaskRecord
 
+from ...config_types import GitHubConfig
 from .store import PullRequestStore
 
 log = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ def handle(task: TaskRecord):
     from ...client import GitHubClient
 
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
+    integration = cast(GitHubConfig, runtime.get_integration(integration_id))
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]

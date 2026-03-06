@@ -1,9 +1,11 @@
 import logging
 import re
 from datetime import date, timedelta
+from typing import cast
 
 from gaas_sdk import runtime
 from gaas_sdk.task import TaskRecord
+from ...config_types import EmailConfig, InboxPlatformConfig
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
@@ -24,8 +26,8 @@ def handle(task: TaskRecord):
     from ...mail import Mailbox
 
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
-    platform = runtime.get_platform(integration_id, "inbox")
+    integration = cast(EmailConfig, runtime.get_integration(integration_id))
+    platform = cast(InboxPlatformConfig, runtime.get_platform(integration_id, "inbox"))
     log.info("email.inbox.check: starting (integration=%s)", integration_id)
 
     notes_dir = runtime.get_notes_dir()
