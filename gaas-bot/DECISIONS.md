@@ -19,3 +19,21 @@ Architectural decisions for gaas-bot, recorded when they're made. Each entry cap
 **Assumption**: This decision assumes Claude can produce quality structured output for audit-sized reports (up to 10 findings with detailed markdown bodies). If structured output quality degrades — truncated findings, malformed JSON, or the model struggling with the schema complexity — Option B (two-phase: explore then structure) is the fallback. The two-phase approach lets Claude explore freely in Phase 1 and then format in Phase 2 as a pure structuring task, which is more resilient to output quality issues.
 
 **Revisit when**: Structured output from the agent SDK proves unreliable for reports of this size, or audit prompts need to use tools like Write during exploration that conflict with structured output mode.
+
+---
+
+## 002: Multi-stage pipeline for PR review (2026-03-06)
+
+**Context**: The `review` command needs to analyze a PR diff, generate findings, and post a formatted comment. Three pipeline architectures were considered:
+
+- **Option A**: Single-stage — one agent call gets the diff, explores the code, and returns findings. Same pattern as audit. Fastest to ship, lowest token cost.
+- **Option B (chosen)**: Three-stage with session continuity — analyze (build understanding), review (generate findings), draft (format comment). Each stage resumes the previous session. ~3x the token cost.
+- **Option C**: Single-stage with a `--depth` flag varying prompt templates and max turns. Same code path as A but with three prompt variants.
+
+**Decision**: Option B — three-stage pipeline with session continuity.
+
+**Rationale**: Code reviews benefit from separating understanding from judgment. When analysis and critique happen in one pass, the agent tends to start generating findings before it has full context, leading to shallow or incorrect observations. The three-stage approach forces the agent to build a complete picture of what changed and what's at risk (analyze), then critique with that context loaded (review), then format without the cognitive load of analysis (draft). Session continuity means no context is lost between stages. The extra token cost is acceptable because reviews are only triggered for non-trivial PRs where thoroughness matters.
+
+**Assumption**: The session continuity mechanism (`resume:<stage>`) reliably preserves the agent's working memory across stages. If the agent SDK's session resumption degrades or introduces latency problems, Option A with a more detailed single prompt would be the fallback.
+
+**Revisit when**: Session resumption proves unreliable, or the three-stage cost becomes prohibitive for the volume of PRs being reviewed. Option C's `--depth` flag could be layered on top of either A or B if variable thoroughness becomes needed.

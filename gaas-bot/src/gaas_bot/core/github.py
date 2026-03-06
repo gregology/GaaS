@@ -118,6 +118,34 @@ def create_issue(
     return resp.parsed_data.html_url
 
 
+def fetch_pull_request(gh: GitHub, owner: str, repo: str, number: int) -> dict:
+    """Fetch pull request metadata."""
+    resp = gh.rest.pulls.get(owner=owner, repo=repo, pull_number=number)
+    pr = resp.parsed_data
+    files_resp = gh.rest.pulls.list_files(
+        owner=owner, repo=repo, pull_number=number, per_page=100,
+    )
+    changed_files = [f.filename for f in files_resp.parsed_data]
+    return {
+        "number": pr.number,
+        "title": pr.title,
+        "body": pr.body or "",
+        "author": pr.user.login if pr.user else "unknown",
+        "base": pr.base.ref,
+        "head": pr.head.ref,
+        "changed_files": changed_files,
+    }
+
+
+def fetch_pull_request_diff(gh: GitHub, owner: str, repo: str, number: int) -> str:
+    """Fetch the diff for a pull request."""
+    resp = gh.rest.pulls.get(
+        owner=owner, repo=repo, pull_number=number,
+        headers={"Accept": "application/vnd.github.diff"},
+    )
+    return resp.text
+
+
 def create_pull_request(
     gh: GitHub, owner: str, repo: str, branch: str, issue_number: int,
     pr_body: str, commit_message: str,

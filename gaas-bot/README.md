@@ -1,6 +1,6 @@
 # gaas-bot
 
-Maintenance automation for GaaS. Resolves GitHub issues, audits documentation, identifies refactoring opportunities, and checks test coverage -- all via Claude Code agents with programmatic GitHub API calls.
+Maintenance automation for GaaS. Resolves GitHub issues, reviews pull requests, audits documentation, identifies refactoring opportunities, and checks test coverage -- all via Claude Code agents with programmatic GitHub API calls.
 
 gaas-bot is a dev dependency of the main GaaS project. It's not part of the production runtime.
 
@@ -20,6 +20,8 @@ The GitHub App needs issue read/write and PR create permissions. See `example.en
 
 ```bash
 gaas-bot resolve --issue 25
+gaas-bot review --pull-request 42
+gaas-bot review --pull-request 42 --dry-run
 gaas-bot audit docs --dry-run
 gaas-bot audit refactor --dry-run --limit 5
 gaas-bot audit tests
@@ -30,6 +32,8 @@ If your venv isn't activated (e.g. no direnv), prefix with `uv run`.
 ### Commands
 
 **`gaas-bot resolve --issue N`** -- Resolve a GitHub issue using a multi-stage Claude agent pipeline. Triages the issue, implements a fix in a git worktree, evaluates the result, updates docs, and opens a PR. All git and GitHub operations are programmatic -- Claude never runs git commands or calls the GitHub API directly.
+
+**`gaas-bot review --pull-request N`** -- Review a pull request using a three-stage pipeline: analyze the diff and affected code, generate findings with severity and line references, then format a review comment. Posts the review as a comment on the PR (or prints it with `--dry-run`). Read-only -- never modifies the codebase.
 
 **`gaas-bot audit docs`** -- Check documentation for drift from the codebase. Claude explores the code and returns structured findings, which are filed as GitHub issues.
 
@@ -86,6 +90,28 @@ flowchart TD
 - **resume:\<stage\>** -- continues the named stage's session. Claude has full memory of that conversation. Used so `docs_review` and `pr_draft` remember what `implementation` built, and `eval_comment` remembers what `evaluation` found.
 - **fork:\<stage\>** -- branches from the named session without mutating it. Supported but not currently used.
 
+## Review pipeline
+
+The review command runs a three-stage pipeline with session continuity. Each stage resumes the previous session, so the agent builds understanding before critiquing and retains full context when formatting the output.
+
+```mermaid
+flowchart TD
+    A[analyze] --> B[review_findings]
+    B --> C[draft]
+    C --> C1([post comment])
+    C1 --> STOP[STOP]
+```
+
+### Stages
+
+| Stage | Session | Output | What it does |
+|---|---|---|---|
+| `analyze` | new | `AnalysisResult` | Reads diff and PR metadata, explores affected files, identifies risk areas |
+| `review_findings` | resume:analyze | `ReviewResult` | Generates line-level findings with severity, category, and suggestions |
+| `draft` | resume:review_findings | `ReviewComment` | Formats everything into a GitHub-ready markdown comment |
+
+All stages are read-only (no Write, Edit, or Bash tools). The draft stage has no tools at all -- it's pure formatting. The only write action is posting the comment, which is done by deterministic Python code after the pipeline completes.
+
 ## Audit pipeline
 
 Audit commands follow a simpler pattern:
@@ -117,9 +143,10 @@ gaas-bot/
   example.env
   DECISIONS.md
   src/gaas_bot/
-    cli.py                  # Click group: resolve, audit
+    cli.py                  # Click group: resolve, review, audit
     commands/
       resolve.py            # Issue resolution pipeline
+      review.py             # PR review pipeline
       audit.py              # Audit subcommands (docs, refactor, tests)
     core/
       agent.py              # Claude agent runner
@@ -128,17 +155,20 @@ gaas-bot/
       templates.py          # Jinja2 rendering
     models/
       resolve.py            # TriageResult, EvalResult, PRResult, CommentResult
+      review.py             # AnalysisResult, ReviewResult, ReviewComment
       audit.py              # AuditFinding, AuditReport
     templates/
       _personality.md.j2    # Writing style rules (included in all user-facing prompts)
       _labels.md.j2         # Canonical label set (included in all audit prompts)
       resolve_*.md.j2       # Resolve pipeline stage prompts
+      review_*.md.j2        # Review pipeline stage prompts
       audit_*.md.j2         # Audit prompts
   tests/
     test_cli.py
     test_models.py
     test_templates.py
     test_audit.py
+    test_review.py
 ```
 
 ## Dependencies
