@@ -125,9 +125,6 @@ app/
   supervisor.py    # Process supervisor (manages server + worker)
   scheduler.py     # Cron scheduling from config
   llm.py           # LLM backend abstraction, structured output, retry
-  store.py         # Re-exports NoteStore from gaas_sdk.store
-  evaluate.py      # Re-exports from gaas_sdk.evaluate
-  classify.py      # Re-exports from gaas_sdk.classify
   human_log.py     # Human-readable daily markdown logs
   actions/         # Re-exports from gaas_sdk.actions + script executor
   integrations/    # Handler registry, entry-point loader, custom integration support

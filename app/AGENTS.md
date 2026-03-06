@@ -49,9 +49,9 @@ Manual API triggers (`POST /integrations/.../run`) call `queue.enqueue()` direct
 
 Registers app-level implementations with `gaas_sdk.runtime` at startup. Called from `main.py` and `worker.py` before `load_all_modules()`. Wires up `policy_enqueue` (config-driven dedup + rate limiting wrapper around `queue.enqueue`), `config.get_integration`, `config.get_platform`, LLM conversation creation, and notes directory lookup. Tests register via `conftest.py`.
 
-### NoteStore (`store.py` - re-export shim)
+### NoteStore (`gaas_sdk.store`)
 
-Re-exports `NoteStore` from `gaas_sdk.store`. The implementation lives in the SDK package. All persistent data (emails, PRs) uses this pattern:
+The `NoteStore` implementation lives in the SDK package. All persistent data (emails, PRs) uses this pattern:
 
 ```yaml
 ---

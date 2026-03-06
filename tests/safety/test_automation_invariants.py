@@ -8,7 +8,7 @@ radius is bounded.
 from hypothesis import given, settings, strategies as st
 
 from app.config import AutomationConfig, ClassificationConfig
-from app.evaluate import MISSING, evaluate_automations
+from gaas_sdk.evaluate import MISSING, evaluate_automations
 from gaas_sdk.models import DictAction, ScriptAction, ServiceAction, SimpleAction
 
 # ---------------------------------------------------------------------------

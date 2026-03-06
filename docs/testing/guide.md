@@ -43,7 +43,7 @@ packages/gaas-gemini/tests/
   test_web_research.py                   # Service handler with/without output_schema
 ```
 
-Package tests import from `gaas_sdk.*` directly, not through `app.*` re-export shims. They run without loading the app config singleton, which means they can be executed in isolation.
+Package tests import from `gaas_sdk.*` directly. They run without loading the app config singleton, which means they can be executed in isolation.
 
 ## Fixtures
 

@@ -1,6 +1,6 @@
 import frontmatter
 
-from app.store import NoteStore
+from gaas_sdk.store import NoteStore
 
 
 class TestNoteStore:

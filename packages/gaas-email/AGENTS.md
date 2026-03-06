@@ -54,7 +54,7 @@ Run in isolation (no app config needed):
 uv run pytest packages/gaas-email/tests/
 ```
 
-Tests import from `gaas_sdk.*` directly, not through `app.*` re-export shims. This means they run without loading the app config singleton.
+Tests import from `gaas_sdk.*` directly. This means they run without loading the app config singleton.
 
 ## Key patterns
 
