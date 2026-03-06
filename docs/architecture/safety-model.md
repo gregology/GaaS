@@ -67,12 +67,12 @@ This is a probabilistic defense. It makes prompt injection harder, but it cannot
 
 ### Boundary 2: Deterministic dispatch
 
-The automation dispatch layer (`_evaluate_automations`) is entirely deterministic. It evaluates `when`/`then` rules against classification results and produces a list of actions. This code does not use any LLM. It's a pure function from classification results to action lists.
+The automation dispatch layer (`evaluate_automations`) is entirely deterministic. It evaluates `when`/`then` rules against classification results and produces a list of actions. This code does not use any LLM. It's a pure function from classification results to action lists.
 
 The dispatch layer enforces:
 
 - Only known actions can be produced. Unknown strings are rejected with a warning.
-- The `SIMPLE_ACTIONS` allowlist in `act.py` controls what actions exist at all.
+- The `SIMPLE_ACTIONS` allowlist in `const.py` controls what actions exist at all.
 - Irreversible actions are blocked from `llm` and `hybrid` provenance (unless `!yolo`).
 - Missing classification keys cause automations to silently not fire (safe default).
 

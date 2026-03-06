@@ -216,7 +216,7 @@ Every `!yolo`-tagged automation generates a warning at startup. The choice is de
 
 ## Safety Dispatch Layer
 
-### `_evaluate_automations` is a pure function
+### `evaluate_automations` is a pure function
 
 Takes classification results and automation rules. Returns a list of actions. No I/O, no LLM calls, no side effects. Given the same inputs, always returns the same outputs.
 
@@ -248,7 +248,7 @@ Why: first-match-wins creates implicit ordering dependencies that are hard to re
 
 ### Action allowlist
 
-`SIMPLE_ACTIONS` is a frozen set in each platform's `act.py`. Unknown string actions are skipped with a warning, never executed. Dict actions (`draft_reply`, `move_to`) have their own explicit allowlist of keys.
+`SIMPLE_ACTIONS` is a frozen set in each platform's `const.py`. Unknown string actions are skipped with a warning, never executed. Dict actions (`draft_reply`, `move_to`) have their own explicit allowlist of keys.
 
 Why: the allowlist is the last line of defense. Even if the config is misconfigured or a custom integration has a bug, the system cannot execute an action that isn't in the set. The set must not grow without a reversibility review.
 
