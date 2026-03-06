@@ -21,7 +21,7 @@ The LLM is non-deterministic. Asserting on its output is meaningless. You cannot
 
 The automation dispatch logic that evaluates classification results and decides which actions to fire is a different story. That code is entirely deterministic. This is where a bug becomes an irreversible action. This is where tests focus.
 
-The dispatch layer (`_evaluate_automations`, `_check_condition`, `_conditions_match`) takes classification results as input and produces action lists as output. For any given input, it always produces the same output. That makes it testable in a meaningful way.
+The dispatch layer (`evaluate_automations`, `check_condition`, `conditions_match`) takes classification results as input and produces action lists as output. For any given input, it always produces the same output. That makes it testable in a meaningful way.
 
 ## Property-based testing over example-based testing
 

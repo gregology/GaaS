@@ -9,7 +9,7 @@ Every integration imports from `gaas_sdk.*` instead of `app.*`.
 ```
 src/gaas_sdk/
   models.py       # Pydantic config models (YoloAction, action types, AutomationConfig, etc.)
-  evaluate.py     # Automation evaluation engine (_evaluate_automations, condition matching)
+  evaluate.py     # Automation evaluation engine (evaluate_automations, condition matching)
   classify.py     # build_schema(), make_jinja_env()
   store.py        # NoteStore (markdown + YAML frontmatter)
   manifest.py     # IntegrationManifest, PlatformManifest, ServiceManifest dataclasses

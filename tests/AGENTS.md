@@ -15,7 +15,7 @@ Every action must be categorized by reversibility tier before tests are written.
 
 ## Test the Decision Boundary, Not the LLM
 
-The LLM is non-deterministic. Asserting on its output is meaningless. The automation dispatch layer (`_evaluate_automations`, `_check_condition`, `_conditions_match`) is deterministic and is where bugs become irreversible actions. Tests focus here.
+The LLM is non-deterministic. Asserting on its output is meaningless. The automation dispatch layer (`evaluate_automations`, `check_condition`, `conditions_match`) is deterministic and is where bugs become irreversible actions. Tests focus here.
 
 ## Safety Tests (`tests/safety/`)
 
