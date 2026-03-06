@@ -10,6 +10,7 @@ Discovered at startup via Python entry points. Can be shadowed by a local overri
 src/gaas_github/
   __init__.py
   client.py                  # GitHub API client (wraps gh CLI)
+  config_types.py            # Typed Protocols for config access (GitHubConfig, GitHubPlatformConfig)
   entity_store.py            # GitHubEntityStore base class for PR and issue stores
   manifest.yaml
   platforms/

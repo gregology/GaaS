@@ -9,6 +9,7 @@ Discovered at startup via Python entry points (`[project.entry-points."gaas.inte
 ```
 src/gaas_email/
   __init__.py
+  config_types.py            # Typed Protocols for config access (EmailConfig, InboxPlatformConfig)
   mail.py                    # Mailbox client, IMAP connection, email model
   manifest.yaml              # Integration manifest (domain, config schema, platforms)
   platforms/

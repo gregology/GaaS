@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from gaas_sdk import runtime
 from gaas_sdk.task import TaskRecord
 
+from ...config_types import GitHubConfig, GitHubPlatformConfig
 from .store import IssueStore
 
 log = logging.getLogger(__name__)
@@ -14,8 +16,8 @@ def handle(task: TaskRecord):
     from ...client import GitHubClient
 
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
-    platform = runtime.get_platform(integration_id, "issues")
+    integration = cast(GitHubConfig, runtime.get_integration(integration_id))
+    platform = cast(GitHubPlatformConfig, runtime.get_platform(integration_id, "issues"))
     log.info("github.issues.check: starting (integration=%s)", integration_id)
 
     client = GitHubClient()

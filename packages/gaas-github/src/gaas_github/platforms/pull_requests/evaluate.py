@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 import frontmatter
 
@@ -14,6 +15,7 @@ from gaas_sdk.evaluate import (
     unwrap_actions,
 )
 from gaas_sdk.task import TaskRecord
+from ...config_types import GitHubConfig, GitHubPlatformConfig
 from .const import DEFAULT_CLASSIFICATIONS, DETERMINISTIC_SOURCES
 from .store import PullRequestStore
 
@@ -67,8 +69,8 @@ def _make_resolver(snapshot: PRSnapshot):
 
 def handle(task: TaskRecord):
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
-    platform = runtime.get_platform(integration_id, "pull_requests")
+    integration = cast(GitHubConfig, runtime.get_integration(integration_id))
+    platform = cast(GitHubPlatformConfig, runtime.get_platform(integration_id, "pull_requests"))
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]

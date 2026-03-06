@@ -1,7 +1,9 @@
 import logging
+from typing import cast
 
 from gaas_sdk import runtime
 from gaas_sdk.task import TaskRecord
+from ...config_types import EmailConfig
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
@@ -11,7 +13,7 @@ def handle(task: TaskRecord):
     from ...mail import Mailbox
 
     integration_id = task["payload"]["integration"]
-    integration = runtime.get_integration(integration_id)
+    integration = cast(EmailConfig, runtime.get_integration(integration_id))
     uid = task["payload"]["uid"]
     log.info("email.inbox.collect: uid=%s (integration=%s)", uid, integration_id)
 
