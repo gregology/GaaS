@@ -5,6 +5,8 @@ frontmatter, value resolution, and automation evaluation. The LLM is not
 involved — these test the decision boundary per the testing philosophy.
 """
 
+import dataclasses
+
 from gaas_sdk.evaluate import MISSING, evaluate_automations
 from gaas_sdk.models import AutomationConfig, SimpleAction
 from gaas_github.platforms.pull_requests.evaluate import (
@@ -359,6 +361,8 @@ class TestSafetyConstants:
         )
         for source in PR_DETERMINISTIC:
             assert hasattr(snap, source), f"PR DETERMINISTIC_SOURCES has '{source}' but PRSnapshot has no such field"
+        for field in dataclasses.fields(PRSnapshot):
+            assert field.name in PR_DETERMINISTIC, f"PRSnapshot has field '{field.name}' but it is not in DETERMINISTIC_SOURCES"
 
     def test_issue_deterministic_sources_are_snapshot_fields(self):
         snap = IssueSnapshot(
@@ -367,6 +371,8 @@ class TestSafetyConstants:
         )
         for source in ISSUE_DETERMINISTIC:
             assert hasattr(snap, source), f"Issue DETERMINISTIC_SOURCES has '{source}' but IssueSnapshot has no such field"
+        for field in dataclasses.fields(IssueSnapshot):
+            assert field.name in ISSUE_DETERMINISTIC, f"IssueSnapshot has field '{field.name}' but it is not in DETERMINISTIC_SOURCES"
 
     def test_pr_no_irreversible_actions(self):
         """PR platform is read-only — no irreversible actions defined."""

@@ -46,7 +46,7 @@ Discovers and classifies pull requests you authored or were requested to review.
 | `risk` | confidence | How risky is this change to production systems? 0 = no risk, 1 = high risk of breaking things. |
 | `documentation_only` | boolean | Is this primarily a documentation or configuration change? |
 
-**Deterministic sources** for `when` conditions: `org`, `repo`, `author`, `status`, `additions`, `deletions`, `changed_files`.
+**Deterministic sources** for `when` conditions: `org`, `repo`, `number`, `author`, `title`, `status`, `additions`, `deletions`, `changed_files`.
 
 ### issues
 
@@ -59,7 +59,7 @@ Discovers and classifies issues assigned to you or that mention you.
 | `urgency` | confidence | How urgently does this issue need attention? 0 = no urgency, 1 = critical. |
 | `actionable` | boolean | Can you take a concrete next step on this issue right now? |
 
-**Deterministic sources** for `when` conditions: `org`, `repo`, `author`, `state`, `labels`, `comment_count`.
+**Deterministic sources** for `when` conditions: `org`, `repo`, `number`, `author`, `title`, `state`, `labels`, `comment_count`.
 
 ## Automations
 
