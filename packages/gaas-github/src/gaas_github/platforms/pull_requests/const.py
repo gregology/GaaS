@@ -23,7 +23,9 @@ DEFAULT_CLASSIFICATIONS: dict[str, ClassificationConfig] = {
 DETERMINISTIC_SOURCES: frozenset[str] = frozenset({
     "org",
     "repo",
+    "number",
     "author",
+    "title",
     "status",
     "additions",
     "deletions",
