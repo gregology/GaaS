@@ -548,6 +548,12 @@ Why: `mailto:` unsubscribe links are unreliable and would require sending an ema
 
 Why: without these headers, the draft shows up as a new conversation in the recipient's mail client instead of a reply in the existing thread.
 
+### `tldextract` for root domain extraction
+
+`root_domain` uses the `tldextract` library rather than naive string splitting on `.`. `tldextract` maintains the Mozilla Public Suffix List, which knows that `.co.uk` is a single suffix but `.com` is not.
+
+Why: splitting on `.` and taking the last two parts works for `mail.company.com` → `company.com`, but fails for `mail.company.co.uk` → `co.uk` (wrong) instead of `company.co.uk` (correct). The Public Suffix List is the only reliable way to distinguish multi-part TLDs. The library caches the list on disk and updates it lazily.
+
 ### `now()` expressions in conditions
 
 `calendar.end: "<now()"` lets you archive past calendar events. This is the one place where evaluation isn't purely a function of stored data.
