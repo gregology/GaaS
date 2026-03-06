@@ -85,11 +85,33 @@ After a full task lifecycle (`enqueue -> dequeue -> complete`): pending is empty
 - Total task count is conserved
 - No task ID appears in two directories simultaneously
 
+## Visual Tests
+
+### HTML Snapshot Tests (`test_ui_snapshots.py`)
+
+Uses syrupy to snapshot the full server-rendered HTML for every GET endpoint. Catches template regressions (broken Jinja2 logic, missing sections, wrong attributes) without a browser. Does not test CSS, JavaScript, or interactive behavior.
+
+Update baselines after intentional template changes: `uv run pytest tests/test_ui_snapshots.py --snapshot-update`
+
+Golden files live in `tests/__snapshots__/test_ui_snapshots.ambr`.
+
+### Playwright Browser Tests (`test_ui_visual.py`)
+
+Tests the full browser stack (HTMX, Alpine.js, DaisyUI) for flows where interactivity matters. Focused on the config editor which writes to disk — test rigor proportional to irreversibility.
+
+All tests are marked `@pytest.mark.visual`. They are auto-skipped when `playwright` is not installed. Run them separately with `pytest -m visual`, or exclude them with `pytest -m "not visual"`.
+
+Requires: `playwright install chromium`
+
+Requires network access to load CDN resources (DaisyUI, HTMX, Alpine.js).
+
 ## Fixtures (`conftest.py`)
 
 - `queue_dir` - Isolated tmp directory with queue subdirs, monkeypatches `queue.BASE_DIR`
 - `notes_dir` - Isolated tmp directory for NoteStore operations
+- `live_server_url` (session-scoped) - Starts the FastAPI app on a random port via uvicorn for Playwright tests. Lazy: only created when a test actually uses it
 - Config bootstrap: Creates a minimal `config.yaml` if missing (config loads eagerly at import time)
+- Auto-skip hook: `pytest_collection_modifyitems` skips `visual`-marked tests when `playwright` is not installed
 
 ## Test Coverage
 
@@ -129,7 +151,7 @@ CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sy
 
 ```
 tests/
-  conftest.py                           # Fixtures
+  conftest.py                           # Fixtures (queue_dir, notes_dir, live_server_url)
   test_actions.py                       # Shared action partitioning, input resolution
   test_config.py                        # YoloAction tag handling, ScriptConfig, QueuePolicyConfig
   test_queue.py                         # Queue lifecycle + stateful property tests
@@ -141,7 +163,12 @@ tests/
   test_script_execution.py              # Script executor, preamble logging, output capture
   test_services.py                      # Service manifest parsing, enqueue with on_result
   test_store.py                         # NoteStore CRUD + archive
+  test_ui_routes.py                     # UI route tests: structure, HTMX/Alpine correctness
+  test_ui_snapshots.py                  # HTML snapshot tests (syrupy golden files)
+  test_ui_visual.py                     # Playwright browser tests (@pytest.mark.visual)
   test_worker.py                        # Worker dispatch, lifecycle (happy/fail/routing), stale recovery, signals
+  __snapshots__/
+    test_ui_snapshots.ambr              # Syrupy golden files for HTML snapshots
   safety/
     test_automation_invariants.py        # Property tests: all possible classifications
     test_chaos.py                        # Chaos tests: garbage LLM output
