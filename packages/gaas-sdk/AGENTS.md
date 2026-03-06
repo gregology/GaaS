@@ -2,7 +2,7 @@
 
 The contracts layer. Models, evaluation engine, classification utilities, NoteStore, manifest dataclasses, provenance resolution, runtime registration, and shared action partitioning. Zero dependency on `app.*`.
 
-Every integration imports from `gaas_sdk.*` instead of `app.*`. The app modules (`app/evaluate.py`, `app/classify.py`, `app/store.py`, `app/actions/__init__.py`) are thin re-export shims that forward to this package. Those shims exist for backwards compatibility during the transition.
+Every integration imports from `gaas_sdk.*` instead of `app.*`.
 
 ## Modules
 
@@ -71,5 +71,4 @@ No circular imports. Models, runtime, and logging are foundational.
 - This is the safety-critical code path. `evaluate.py` is where bugs become irreversible actions.
 - Any change to condition matching or action partitioning needs corresponding safety test updates in `tests/safety/`.
 - The SDK has no dependency on `app.*`. If you find yourself importing from `app`, you're going the wrong direction. Run `uv run lint-imports` to verify. The import-linter config in `pyproject.toml` enforces this boundary automatically.
-- Re-export shims in `app/` must stay in sync. If you add a new public function here, add the re-export too. Run `uv run vulture app/evaluate.py app/classify.py app/store.py app/actions/__init__.py --min-confidence 80` to check for stale re-exports.
 - Run `uv run mypy packages/gaas-sdk/src/ --ignore-missing-imports` after changing function signatures or adding new models. Type drift in the SDK propagates to every integration.

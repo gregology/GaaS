@@ -5,7 +5,7 @@ from unittest.mock import patch
 from app.actions import enqueue_actions, is_script_action, resolve_inputs
 from gaas_sdk.actions import _render_template
 from gaas_sdk.models import ScriptAction, SimpleAction
-from app.evaluate import MISSING
+from gaas_sdk.evaluate import MISSING
 
 
 def _make_resolver(**fields):

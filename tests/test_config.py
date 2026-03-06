@@ -8,7 +8,7 @@ from app.config import (
     YoloAction,
     _Loader,
 )
-from app.evaluate import unwrap_actions
+from gaas_sdk.evaluate import unwrap_actions
 from gaas_sdk.models import ScriptAction
 
 

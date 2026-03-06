@@ -6,12 +6,6 @@ from gaas_sdk.models import (
     YoloAction,
     AutomationConfig,
 )
-from gaas_sdk.evaluate import (
-    MISSING,
-    evaluate_automations,
-)
-from gaas_sdk.classify import build_schema
-from gaas_sdk.store import NoteStore
 from gaas_sdk.manifest import (
     ServiceManifest,
 )
@@ -40,21 +34,6 @@ class TestSDKImports:
 
         from app.config import AutomationConfig as AppAutomationConfig
         assert AutomationConfig is AppAutomationConfig
-
-    def test_evaluate_is_same_as_app(self):
-        from app.evaluate import MISSING as AppMISSING
-        assert MISSING is AppMISSING
-
-        from app.evaluate import evaluate_automations as app_ea
-        assert evaluate_automations is app_ea
-
-    def test_classify_is_same_as_app(self):
-        from app.classify import build_schema as app_bs
-        assert build_schema is app_bs
-
-    def test_store_is_same_as_app(self):
-        from app.store import NoteStore as AppNoteStore
-        assert NoteStore is AppNoteStore
 
 
 class TestServiceManifest:

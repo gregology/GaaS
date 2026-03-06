@@ -63,7 +63,7 @@ classification:
 (optional body content)
 ```
 
-The generic `NoteStore` class (`gaas_sdk.store`) handles reading, writing, and moving these files. Platform-specific stores like `EmailStore`, `PullRequestStore`, and `IssueStore` wrap it with domain methods, but the underlying storage is always markdown with frontmatter. (`app/store.py` re-exports `NoteStore` for backwards compatibility.)
+The generic `NoteStore` class (`gaas_sdk.store`) handles reading, writing, and moving these files. Platform-specific stores like `EmailStore`, `PullRequestStore`, and `IssueStore` wrap it with domain methods, but the underlying storage is always markdown with frontmatter.
 
 This means every piece of state in the system is human-readable. You can open any file in a text editor and see exactly what GaaS knows about an email or an issue, including the raw classification results.
 

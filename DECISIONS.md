@@ -360,7 +360,7 @@ Why: custom integrations can define their own config fields without modifying co
 
 Each integration owns its pipeline stages. `evaluate.py`, `classify.py`, `act.py` -- each lives inside the integration package with platform-specific logic (snapshot construction, prompt rendering, action execution, value resolution).
 
-However, the automation evaluation engine and classification schema builder are **infrastructure**, not pipeline logic. They operate on `AutomationConfig` and `ClassificationConfig` and have no integration-specific knowledge. They live in `gaas_sdk.evaluate` and `gaas_sdk.classify` respectively, in the same category as `resolve_provenance` and `YoloAction`. (`app/evaluate.py` and `app/classify.py` are re-export shims for backwards compatibility.)
+However, the automation evaluation engine and classification schema builder are **infrastructure**, not pipeline logic. They operate on `AutomationConfig` and `ClassificationConfig` and have no integration-specific knowledge. They live in `gaas_sdk.evaluate` and `gaas_sdk.classify` respectively, in the same category as `resolve_provenance` and `YoloAction`.
 
 The line: if it operates on core config types and is identical across all platforms (evaluation engine, schema building, provenance), it goes in the SDK. If it touches platform-specific data (snapshots, prompts, stores, actions, value resolution), it stays in the integration.
 
@@ -427,12 +427,6 @@ Two alternatives were considered:
 **Dependency injection via constructor args.** Every handler function would receive a `context` object with `enqueue`, `get_config`, etc. Clean in theory. In practice it means changing every handler signature, threading context through 5+ levels of the check->collect->classify->evaluate->act pipeline, and updating every test. The handler registry pattern (simple function that takes a task dict) is one of the better parts of the current design.
 
 **Abstract base classes for integration contracts.** Define `class BaseIntegration(ABC)` with abstract methods. This works well for frameworks like Django but fights the current architecture. GaaS integrations are bags of handler functions registered by name, not class hierarchies. Forcing them into an OOP shape would mean rewriting the handler registry, the manifest system, and the worker dispatch.
-
-### Re-export shims for backwards compatibility
-
-After extraction, `app/evaluate.py` re-exports from `gaas_sdk.evaluate`, `app/classify.py` from `gaas_sdk.classify`, etc. Existing code that imports from `app.*` keeps working.
-
-Why: this lets the migration happen incrementally. Internal code can be updated to import from `gaas_sdk.*` over time. The shims are thin (one-line re-exports) and have no maintenance cost.
 
 ### Installable packages over namespace packages
 
