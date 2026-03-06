@@ -51,17 +51,14 @@ def create_worktree(branch: str | None = None, *, detach: bool = False) -> Path:
     If detach is True, creates a detached HEAD worktree (for read-only audits).
     """
     root = repo_root()
-    subprocess.run(
-        ["git", "fetch", "origin", "main"],
-        cwd=root, check=True, capture_output=True,
-    )
+    _run_git(["git", "fetch", "origin", "main"], cwd=root)
 
     worktree_dir = Path(tempfile.mkdtemp(prefix="gaas-bot-"))
 
     if detach:
-        subprocess.run(
+        _run_git(
             ["git", "worktree", "add", "--detach", str(worktree_dir), "origin/main"],
-            cwd=root, check=True, capture_output=True,
+            cwd=root,
         )
     elif branch:
         result = subprocess.run(
@@ -69,23 +66,23 @@ def create_worktree(branch: str | None = None, *, detach: bool = False) -> Path:
             cwd=root, capture_output=True,
         )
         if result.returncode == 0:
-            subprocess.run(
+            _run_git(
                 ["git", "branch", "-f", branch, "origin/main"],
-                cwd=root, check=True, capture_output=True,
+                cwd=root,
             )
-            subprocess.run(
+            _run_git(
                 ["git", "worktree", "add", str(worktree_dir), branch],
-                cwd=root, check=True, capture_output=True,
+                cwd=root,
             )
         else:
-            subprocess.run(
+            _run_git(
                 ["git", "worktree", "add", "-b", branch, str(worktree_dir), "origin/main"],
-                cwd=root, check=True, capture_output=True,
+                cwd=root,
             )
     else:
-        subprocess.run(
+        _run_git(
             ["git", "worktree", "add", "--detach", str(worktree_dir), "origin/main"],
-            cwd=root, check=True, capture_output=True,
+            cwd=root,
         )
 
     print(f"Created worktree at {worktree_dir}")
