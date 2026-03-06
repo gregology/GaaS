@@ -9,9 +9,12 @@ uv run pytest -v                           # All tests (core + packages)
 uv run pytest tests/safety                 # Safety tests only
 uv run pytest packages/gaas-email/tests/   # Email tests in isolation (no app config)
 uv run pytest packages/gaas-gemini/tests/  # Gemini tests in isolation
+uv run pytest -m visual                    # Playwright browser tests only
+uv run pytest -m "not visual"             # Everything except Playwright tests
+uv run pytest tests/test_ui_snapshots.py --snapshot-update  # Regenerate HTML snapshot baselines
 ```
 
-CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sync, pytest.
+CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sync, pytest. Playwright tests require `playwright install chromium` and network access for CDN resources.
 
 ## Test organization
 
@@ -26,6 +29,9 @@ tests/
   test_scheduler.py                     # interval_to_cron conversion
   test_script_execution.py              # Script executor, preamble logging, output capture
   test_store.py                         # NoteStore CRUD + archive
+  test_ui_routes.py                     # UI route tests: structure, HTMX/Alpine correctness
+  test_ui_snapshots.py                  # HTML snapshot tests (syrupy golden files)
+  test_ui_visual.py                     # Playwright browser tests (@pytest.mark.visual)
   safety/
     test_automation_invariants.py        # Property tests: all possible classifications
     test_chaos.py                        # Chaos tests: garbage LLM output
@@ -51,7 +57,9 @@ Defined in `tests/conftest.py`:
 
 - **`queue_dir`** - Creates an isolated temp directory with queue subdirectories (`pending/`, `active/`, `done/`, `failed/`) and monkeypatches `queue.BASE_DIR` to point at it. Each test gets a clean queue.
 - **`notes_dir`** - Isolated temp directory for NoteStore operations.
+- **`live_server_url`** (session-scoped) - Starts the FastAPI app on a random port via uvicorn. Used by Playwright tests. Lazy: only created when a test actually uses it.
 - **Config bootstrap** - If `config.yaml` doesn't exist when tests run, `conftest.py` creates a minimal one automatically. This is needed because config loads eagerly at import time.
+- **Auto-skip hook** - `pytest_collection_modifyitems` skips `visual`-marked tests when `playwright` is not installed.
 
 ## Safety tests
 

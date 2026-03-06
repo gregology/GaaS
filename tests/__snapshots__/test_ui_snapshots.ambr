@@ -1,0 +1,702 @@
+# serializer version: 1
+# name: TestConfigSnapshot.test_snapshot
+  '''
+  <!DOCTYPE html>
+  <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaaS — Config</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.3" defer></script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .corner-ribbon {
+        width: 200px;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        right: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        z-index: 1000;
+        font-weight: bold;
+        pointer-events: none;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-200 overflow-x-hidden">
+    <div class="corner-ribbon">ALPHA</div>
+    <div class="navbar bg-base-100 shadow-lg">
+      <div class="navbar-start">
+        <a href="/ui/" class="btn btn-ghost text-xl">GaaS</a>
+      </div>
+      <div class="navbar-center">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/ui/">Dashboard</a></li>
+          <li><a href="/ui/config">Config</a></li>
+          <li><a href="/ui/queue">Queue</a></li>
+          <li><a href="/ui/logs">Logs</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end"></div>
+    </div>
+    <main class="container mx-auto p-6">
+      <div id="config-banner-container">
+        
+      </div>
+      
+  
+  
+  
+  
+  
+  <div id="llm-section" x-data="{ editing: null, adding: false }">
+    
+  
+  <div class="flex items-center gap-3 mb-4">
+    <h2 class="text-2xl font-bold">LLM Profiles</h2>
+    <button class="btn btn-outline btn-sm" @click="adding = !adding; editing = null">+ Add</button>
+  </div>
+  
+  <div x-show="adding" x-cloak>
+    
+  <form hx-post="/ui/config/llms/_new" hx-target="#llm-section" hx-swap="innerHTML"
+        class="card bg-base-200 p-4 my-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text">Profile Name</span></label>
+        <input type="text" name="profile_name" class="input input-bordered input-sm" required placeholder="e.g. fast" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Base URL</span></label>
+        <input type="text" name="base_url" value="http://localhost:11434" class="input input-bordered input-sm" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Model</span></label>
+        <input type="text" name="model" class="input input-bordered input-sm" required placeholder="model-name:latest" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Parameters (YAML)</span></label>
+        <textarea name="parameters" class="textarea textarea-bordered textarea-sm font-mono" rows="2">temperature: 0.7</textarea>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary btn-sm">Create</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="adding = false">Cancel</button>
+    </div>
+  </form>
+  
+  </div>
+  
+  <div class="overflow-x-auto mb-8">
+    <table class="table table-zebra">
+      <thead>
+        <tr><th>Name</th><th>Base URL</th><th>Model</th><th>Token</th><th>Parameters</th><th></th></tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td class="font-mono font-semibold">default</td>
+          <td class="text-sm">http://localhost:11434</td>
+          <td class="text-sm font-mono">test-model</td>
+          <td class="text-sm">—</td>
+          <td class="text-sm">—</td>
+          <td class="text-sm">
+            <button class="btn btn-ghost btn-xs" @click="editing = editing === 'default' ? null : 'default'; adding = false">Edit</button>
+            
+          </td>
+        </tr>
+        <tr x-show="editing === 'default'" x-cloak>
+          <td colspan="6">
+            
+  <form hx-post="/ui/config/llms/default" hx-target="#llm-section" hx-swap="innerHTML"
+        class="card bg-base-200 p-4 my-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text">Base URL</span></label>
+        <input type="text" name="base_url" value="http://localhost:11434" class="input input-bordered input-sm" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Model</span></label>
+        <input type="text" name="model" value="test-model" class="input input-bordered input-sm" required />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Token</span></label>
+        <input type="text" name="token" value="" class="input input-bordered input-sm" placeholder="Leave blank or use raw YAML editor for !secret" readonly />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Parameters (YAML)</span></label>
+        <textarea name="parameters" class="textarea textarea-bordered textarea-sm font-mono" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+    </div>
+  </form>
+  
+          </td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+  </div>
+  
+  
+  
+  
+  
+  <h2 class="text-2xl font-bold mb-4">Integrations</h2>
+  
+  
+  
+  
+  
+  
+  <div id="scripts-section" x-data="{ editing: null, adding: false }">
+    
+  
+  
+  <div class="flex items-center gap-3 mb-4">
+    <h2 class="text-2xl font-bold">Scripts</h2>
+    <button class="btn btn-outline btn-sm" @click="adding = !adding; editing = null">+ Add</button>
+  </div>
+  
+  <div x-show="adding" x-cloak>
+    
+  <form hx-post="/ui/config/scripts/_new" hx-target="#scripts-section" hx-swap="innerHTML"
+        class="card bg-base-200 p-4 my-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text">Script Name</span></label>
+        <input type="text" name="script_name" class="input input-bordered input-sm" required placeholder="e.g. deploy" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Description</span></label>
+        <input type="text" name="description" class="input input-bordered input-sm" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Timeout (s)</span></label>
+        <input type="number" name="timeout" value="120" class="input input-bordered input-sm" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Inputs (comma-separated)</span></label>
+        <input type="text" name="inputs" class="input input-bordered input-sm" />
+      </div>
+    </div>
+    <div class="form-control mt-3">
+      <label class="label"><span class="label-text">Shell</span></label>
+      <textarea name="shell" class="textarea textarea-bordered textarea-sm font-mono" rows="5" required placeholder="echo hello"></textarea>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary btn-sm">Create</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="adding = false">Cancel</button>
+    </div>
+  </form>
+  
+  </div>
+  
+  
+  </div>
+  
+  
+  
+  
+  
+  <div id="directories-section" x-data="{ editing: false }">
+    
+  
+  <div class="flex items-center gap-3 mb-4 mt-8">
+    <h2 class="text-2xl font-bold">Directories</h2>
+    <button class="btn btn-ghost btn-xs" @click="editing = !editing">Edit</button>
+  </div>
+  
+  <div x-show="editing" x-cloak>
+    
+  <form hx-post="/ui/config/directories" hx-target="#directories-section" hx-swap="innerHTML"
+        class="card bg-base-200 p-4 my-2">
+    <div class="grid grid-cols-1 gap-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text">Notes</span></label>
+        <input type="text" name="notes" value="" class="input input-bordered input-sm" placeholder="Optional" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Task Queue</span></label>
+        <input type="text" name="task_queue" value="data/queue" class="input input-bordered input-sm" required />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Logs</span></label>
+        <input type="text" name="logs" value="logs" class="input input-bordered input-sm" required />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">Custom Integrations</span></label>
+        <input type="text" name="custom_integrations" value="" class="input input-bordered input-sm" placeholder="Optional" />
+      </div>
+    </div>
+    <div class="flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      <button type="button" class="btn btn-ghost btn-sm" @click="editing = false">Cancel</button>
+    </div>
+  </form>
+  
+  </div>
+  
+  <div x-show="!editing" class="overflow-x-auto mb-8">
+    <table class="table table-zebra">
+      <thead><tr><th>Directory</th><th>Path</th></tr></thead>
+      <tbody>
+        
+        
+        
+        
+        <tr><td class="font-mono">task_queue</td><td class="text-sm">data/queue</td></tr>
+        
+        
+        
+        <tr><td class="font-mono">logs</td><td class="text-sm">logs</td></tr>
+        
+        
+        
+        
+      </tbody>
+    </table>
+  </div>
+  </div>
+  
+  
+  
+  
+  
+  <div class="collapse collapse-arrow bg-base-100 shadow mt-8 mb-8">
+    <input type="checkbox" />
+    <div class="collapse-title">
+      <h2 class="text-2xl font-bold">Raw YAML Editor</h2>
+      <p class="text-sm opacity-70">Edit config.yaml directly. Use this for !secret values and advanced edits.</p>
+    </div>
+    <div class="collapse-content">
+      <form hx-post="/ui/config/yaml" hx-target="#raw-yaml-result" hx-swap="innerHTML">
+        <textarea name="yaml_content" class="textarea textarea-bordered font-mono text-xs w-full" rows="20">llms:
+    default:
+      model: test-model
+  </textarea>
+        <div id="raw-yaml-result" class="mt-2"></div>
+        <div class="flex gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+      <p>GaaS — Greg as a Service</p>
+    </footer>
+  </body>
+  </html>
+  '''
+# ---
+# name: TestDashboardSnapshot.test_snapshot
+  '''
+  <!DOCTYPE html>
+  <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaaS — Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.3" defer></script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .corner-ribbon {
+        width: 200px;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        right: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        z-index: 1000;
+        font-weight: bold;
+        pointer-events: none;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-200 overflow-x-hidden">
+    <div class="corner-ribbon">ALPHA</div>
+    <div class="navbar bg-base-100 shadow-lg">
+      <div class="navbar-start">
+        <a href="/ui/" class="btn btn-ghost text-xl">GaaS</a>
+      </div>
+      <div class="navbar-center">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/ui/">Dashboard</a></li>
+          <li><a href="/ui/config">Config</a></li>
+          <li><a href="/ui/queue">Queue</a></li>
+          <li><a href="/ui/logs">Logs</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end"></div>
+    </div>
+    <main class="container mx-auto p-6">
+      <div id="config-banner-container">
+        
+      </div>
+      
+  
+  
+  
+  <h2 class="text-2xl font-bold mb-4">Integrations</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    
+  </div>
+  
+  <h2 class="text-2xl font-bold mb-4">Queue</h2>
+  <div class="stats shadow mb-8">
+    <div class="stat">
+      <div class="stat-title">Pending</div>
+      <div class="stat-value text-warning">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Active</div>
+      <div class="stat-value text-info">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Done</div>
+      <div class="stat-value text-success">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Failed</div>
+      <div class="stat-value text-error">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Total</div>
+      <div class="stat-value">0</div>
+    </div>
+  </div>
+  
+  
+  
+  
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+      <p>GaaS — Greg as a Service</p>
+    </footer>
+  </body>
+  </html>
+  '''
+# ---
+# name: TestIntegrationsSnapshot.test_snapshot
+  list([
+  ])
+# ---
+# name: TestLogDetailSnapshot.test_missing_date
+  '''
+  <!DOCTYPE html>
+  <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaaS — Logs</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.3" defer></script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .corner-ribbon {
+        width: 200px;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        right: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        z-index: 1000;
+        font-weight: bold;
+        pointer-events: none;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-200 overflow-x-hidden">
+    <div class="corner-ribbon">ALPHA</div>
+    <div class="navbar bg-base-100 shadow-lg">
+      <div class="navbar-start">
+        <a href="/ui/" class="btn btn-ghost text-xl">GaaS</a>
+      </div>
+      <div class="navbar-center">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/ui/">Dashboard</a></li>
+          <li><a href="/ui/config">Config</a></li>
+          <li><a href="/ui/queue">Queue</a></li>
+          <li><a href="/ui/logs">Logs</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end"></div>
+    </div>
+    <main class="container mx-auto p-6">
+      <div id="config-banner-container">
+        
+      </div>
+      
+  
+  <h2 class="text-2xl font-bold mb-4">Audit Logs</h2>
+  
+  <div class="flex gap-6">
+    <div class="w-64 shrink-0">
+      <ul class="menu bg-base-100 rounded-box shadow">
+        
+        <li class="disabled"><span>No logs yet</span></li>
+        
+      </ul>
+    </div>
+  
+    <div class="flex-1">
+      
+      <div class="alert">
+        <span>No log content found for 2099-01-01.</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+      <p>GaaS — Greg as a Service</p>
+    </footer>
+  </body>
+  </html>
+  '''
+# ---
+# name: TestLogsSnapshot.test_snapshot
+  '''
+  <!DOCTYPE html>
+  <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaaS — Logs</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.3" defer></script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .corner-ribbon {
+        width: 200px;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        right: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        z-index: 1000;
+        font-weight: bold;
+        pointer-events: none;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-200 overflow-x-hidden">
+    <div class="corner-ribbon">ALPHA</div>
+    <div class="navbar bg-base-100 shadow-lg">
+      <div class="navbar-start">
+        <a href="/ui/" class="btn btn-ghost text-xl">GaaS</a>
+      </div>
+      <div class="navbar-center">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/ui/">Dashboard</a></li>
+          <li><a href="/ui/config">Config</a></li>
+          <li><a href="/ui/queue">Queue</a></li>
+          <li><a href="/ui/logs">Logs</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end"></div>
+    </div>
+    <main class="container mx-auto p-6">
+      <div id="config-banner-container">
+        
+      </div>
+      
+  
+  <h2 class="text-2xl font-bold mb-4">Audit Logs</h2>
+  
+  <div class="flex gap-6">
+    <div class="w-64 shrink-0">
+      <ul class="menu bg-base-100 rounded-box shadow">
+        
+        <li class="disabled"><span>No logs yet</span></li>
+        
+      </ul>
+    </div>
+  
+    <div class="flex-1">
+      
+      <div class="alert">
+        <span>Select a date to view its log.</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+      <p>GaaS — Greg as a Service</p>
+    </footer>
+  </body>
+  </html>
+  '''
+# ---
+# name: TestQueueSnapshot.test_snapshot
+  '''
+  <!DOCTYPE html>
+  <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaaS — Queue</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.3" defer></script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .corner-ribbon {
+        width: 200px;
+        background: #e43;
+        position: absolute;
+        top: 25px;
+        right: -50px;
+        text-align: center;
+        line-height: 50px;
+        letter-spacing: 1px;
+        color: #f0f0f0;
+        transform: rotate(45deg);
+        -webkit-transform: rotate(45deg);
+        z-index: 1000;
+        font-weight: bold;
+        pointer-events: none;
+        box-shadow: 0 0 3px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-base-200 overflow-x-hidden">
+    <div class="corner-ribbon">ALPHA</div>
+    <div class="navbar bg-base-100 shadow-lg">
+      <div class="navbar-start">
+        <a href="/ui/" class="btn btn-ghost text-xl">GaaS</a>
+      </div>
+      <div class="navbar-center">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/ui/">Dashboard</a></li>
+          <li><a href="/ui/config">Config</a></li>
+          <li><a href="/ui/queue">Queue</a></li>
+          <li><a href="/ui/logs">Logs</a></li>
+        </ul>
+      </div>
+      <div class="navbar-end"></div>
+    </div>
+    <main class="container mx-auto p-6">
+      <div id="config-banner-container">
+        
+      </div>
+      
+  
+  <h2 class="text-2xl font-bold mb-4">Task Queue</h2>
+  
+  <div class="stats shadow mb-8">
+    <div class="stat">
+      <div class="stat-title">Pending</div>
+      <div class="stat-value text-warning">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Active</div>
+      <div class="stat-value text-info">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Done</div>
+      <div class="stat-value text-success">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Failed</div>
+      <div class="stat-value text-error">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Total</div>
+      <div class="stat-value">0</div>
+    </div>
+  </div>
+  
+  <div role="tablist" class="tabs tabs-boxed mb-4">
+    
+    <input type="radio" name="queue_tabs" role="tab" class="tab" aria-label="pending" checked />
+    <div role="tabpanel" class="tab-content p-4">
+      
+      <p class="text-sm opacity-70">No tasks in pending.</p>
+      
+    </div>
+    
+    <input type="radio" name="queue_tabs" role="tab" class="tab" aria-label="active"  />
+    <div role="tabpanel" class="tab-content p-4">
+      
+      <p class="text-sm opacity-70">No tasks in active.</p>
+      
+    </div>
+    
+    <input type="radio" name="queue_tabs" role="tab" class="tab" aria-label="done"  />
+    <div role="tabpanel" class="tab-content p-4">
+      
+      <p class="text-sm opacity-70">No tasks in done.</p>
+      
+    </div>
+    
+    <input type="radio" name="queue_tabs" role="tab" class="tab" aria-label="failed"  />
+    <div role="tabpanel" class="tab-content p-4">
+      
+      <p class="text-sm opacity-70">No tasks in failed.</p>
+      
+    </div>
+    
+  </div>
+  
+  
+    </main>
+    <footer class="footer footer-center p-4 text-base-content">
+      <p>GaaS — Greg as a Service</p>
+    </footer>
+  </body>
+  </html>
+  '''
+# ---
+# name: TestRootSnapshot.test_snapshot
+  dict({
+    'status': 'ok',
+  })
+# ---

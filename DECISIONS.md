@@ -622,6 +622,18 @@ Config loads eagerly at import time. Tests need a valid `config.yaml` before any
 
 Why: without this, running tests on a fresh clone fails because `config.yaml` is gitignored. The bootstrap creates the minimum viable config.
 
+### Hybrid visual testing: syrupy snapshots + targeted Playwright
+
+HTML snapshot tests (syrupy) cover all pages with zero browser overhead. Playwright browser tests cover only interactive flows — Alpine.js toggles, HTMX partial swaps, DaisyUI collapse — where server-rendered HTML can't tell you if JS-driven behavior works.
+
+Why not snapshots only: they can't test `x-show`, `hx-post`, or collapse interactions. CSS/JS breakage is invisible.
+
+Why not Playwright only: it's slow, needs a Chromium binary (~150 MB), and depends on CDN resources for DaisyUI/HTMX/Alpine.js. Running 7 browser tests for static HTML structure is wasteful.
+
+The split follows the same principle as action testing: test rigor proportional to irreversibility. The config editor (which writes to disk) gets browser tests. Read-only pages get snapshots.
+
+Playwright tests are gated behind `@pytest.mark.visual` and auto-skipped when `playwright` is not installed, so the fast snapshot suite always runs.
+
 ---
 
 ## Dependency Choices

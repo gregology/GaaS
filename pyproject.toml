@@ -40,6 +40,8 @@ dev = [
     "import-linter>=2.0",
     "bandit>=1.7",
     "ruff>=0.4",
+    "syrupy>=4.0",
+    "pytest-playwright>=0.4",
     "gaas-bot",
 ]
 
@@ -54,6 +56,9 @@ gaas-bot = { path = "gaas-bot", editable = true }
 testpaths = ["tests", "packages/gaas-email/tests", "packages/gaas-gemini/tests", "packages/gaas-github/tests", "packages/gaas-sdk/tests", "gaas-bot/tests"]
 pythonpath = ["."]
 addopts = "--import-mode=importlib"
+markers = [
+    "visual: Playwright browser tests (require: playwright install chromium)",
+]
 
 [tool.mypy]
 strict = true
