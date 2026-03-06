@@ -121,6 +121,10 @@ Conditions can reference LLM classification results or deterministic email prope
 - when:
     domain: example.com
 
+# Root domain (strips subdomains, handles .co.uk etc)
+- when:
+    root_domain: company.com
+
 # Noreply address
 - when:
     is_noreply: true
@@ -135,7 +139,7 @@ Conditions can reference LLM classification results or deterministic email prope
     authentication.spf_pass: true
 ```
 
-The full list of deterministic sources: `authentication`, `calendar`, `domain`, `from_address`, `has_attachments`, `is_answered`, `is_calendar_event`, `is_forward`, `is_noreply`, `is_read`, `is_reply`, `is_starred`, `is_unsubscribable`.
+The full list of deterministic sources: `authentication`, `calendar`, `domain`, `from_address`, `has_attachments`, `is_answered`, `is_calendar_event`, `is_forward`, `is_noreply`, `is_read`, `is_reply`, `is_starred`, `is_unsubscribable`, `root_domain`.
 
 Multiple conditions in a `when` block use AND logic.
 
