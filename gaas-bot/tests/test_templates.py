@@ -90,3 +90,101 @@ def test_labels_template_standalone():
     assert "`Type safety`" in result
     assert "`Error handling`" in result
     assert "`Dead code`" in result
+
+
+# ---------------------------------------------------------------------------
+# Review templates
+# ---------------------------------------------------------------------------
+
+def _review_analyze_ctx():
+    return {
+        "owner": "testowner",
+        "repo": "testrepo",
+        "pr_number": 42,
+        "pr_title": "Add widget support",
+        "pr_body": "This PR adds widget support.",
+        "pr_author": "dev1",
+        "pr_base": "main",
+        "pr_head": "add-widgets",
+        "changed_files": ["app/widgets.py", "tests/test_widgets.py"],
+        "diff": "+def create_widget():\n+    pass",
+    }
+
+
+def test_render_review_analyze():
+    ctx = _review_analyze_ctx()
+    result = render("review_analyze.md.j2", ctx)
+    assert "testowner/testrepo" in result
+    assert "Add widget support" in result
+    assert "dev1" in result
+    assert "app/widgets.py" in result
+    assert "+def create_widget" in result
+
+
+def test_render_review_analyze_no_body():
+    ctx = _review_analyze_ctx()
+    ctx["pr_body"] = ""
+    result = render("review_analyze.md.j2", ctx)
+    assert "No description provided" in result
+
+
+def test_render_review_review():
+    ctx = {
+        "pr_number": 42,
+        "pr_title": "Add widget support",
+        "analysis": {
+            "summary": "Adds widget creation",
+            "risk_areas": ["No input validation"],
+            "affected_subsystems": ["widgets"],
+        },
+    }
+    result = render("review_review.md.j2", ctx)
+    assert "Add widget support" in result
+    assert "Adds widget creation" in result
+    assert "No input validation" in result
+    assert "widgets" in result
+
+
+def test_render_review_draft_with_findings():
+    ctx = {
+        "pr_number": 42,
+        "pr_title": "Add widget support",
+        "analysis": {"summary": "Adds widget creation"},
+        "findings": [
+            {
+                "severity": "critical",
+                "category": "bug",
+                "file": "app/widgets.py",
+                "line": 10,
+                "description": "Missing null check",
+                "suggestion": "Add a guard clause",
+            },
+        ],
+    }
+    result = render("review_draft.md.j2", ctx)
+    assert "CRITICAL" in result
+    assert "app/widgets.py" in result
+    assert "line 10" in result
+    assert "Missing null check" in result
+
+
+def test_render_review_draft_no_findings():
+    ctx = {
+        "pr_number": 42,
+        "pr_title": "Clean PR",
+        "analysis": {"summary": "Minor cleanup"},
+        "findings": [],
+    }
+    result = render("review_draft.md.j2", ctx)
+    assert "No findings" in result
+
+
+def test_render_review_draft_includes_personality():
+    ctx = {
+        "pr_number": 1,
+        "pr_title": "t",
+        "analysis": {"summary": "s"},
+        "findings": [],
+    }
+    result = render("review_draft.md.j2", ctx)
+    assert "Banned vocabulary" in result

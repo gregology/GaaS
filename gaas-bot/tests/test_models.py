@@ -9,6 +9,13 @@ from gaas_bot.models.resolve import (
     TriageDecision,
     TriageResult,
 )
+from gaas_bot.models.review import (
+    AnalysisResult,
+    FindingSeverity,
+    ReviewComment,
+    ReviewFinding,
+    ReviewResult,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -76,3 +83,85 @@ def test_audit_finding_preserves_markdown_body():
     body = "## Summary\n\nSome **bold** text.\n\n```python\nprint('hello')\n```"
     finding = AuditFinding.model_validate({"title": "t", "body": body, "labels": ["Tech debt"]})
     assert "```python" in finding.body
+
+
+# ---------------------------------------------------------------------------
+# Review models
+# ---------------------------------------------------------------------------
+
+def test_analysis_result_roundtrip():
+    data = {
+        "summary": "Adds a new endpoint",
+        "risk_areas": ["auth bypass", "missing validation"],
+        "affected_subsystems": ["api", "auth"],
+    }
+    result = AnalysisResult.model_validate(data)
+    assert result.summary == "Adds a new endpoint"
+    assert len(result.risk_areas) == 2
+    assert result.affected_subsystems == ["api", "auth"]
+
+
+def test_review_finding_roundtrip():
+    data = {
+        "severity": "critical",
+        "category": "bug",
+        "file": "app/main.py",
+        "line": 42,
+        "description": "Off-by-one error",
+        "suggestion": "Use >= instead of >",
+    }
+    finding = ReviewFinding.model_validate(data)
+    assert finding.severity == FindingSeverity.CRITICAL
+    assert finding.model_dump()["severity"] == "critical"
+    assert finding.line == 42
+
+
+def test_review_finding_null_line():
+    data = {
+        "severity": "note",
+        "category": "naming",
+        "file": "app/config.py",
+        "line": None,
+        "description": "Confusing variable name",
+        "suggestion": "Rename to something clearer",
+    }
+    finding = ReviewFinding.model_validate(data)
+    assert finding.line is None
+
+
+def test_review_result_empty():
+    result = ReviewResult.model_validate({"findings": []})
+    assert result.findings == []
+
+
+def test_review_result_multiple_findings():
+    data = {
+        "findings": [
+            {
+                "severity": "critical",
+                "category": "bug",
+                "file": "a.py",
+                "line": 1,
+                "description": "d1",
+                "suggestion": "s1",
+            },
+            {
+                "severity": "warning",
+                "category": "design",
+                "file": "b.py",
+                "line": None,
+                "description": "d2",
+                "suggestion": "s2",
+            },
+        ],
+    }
+    result = ReviewResult.model_validate(data)
+    assert len(result.findings) == 2
+    assert result.findings[0].severity == FindingSeverity.CRITICAL
+    assert result.findings[1].severity == FindingSeverity.WARNING
+
+
+def test_review_comment_roundtrip():
+    data = {"body": "## Review\n\nLooks good overall."}
+    result = ReviewComment.model_validate(data)
+    assert "## Review" in result.body

@@ -6,6 +6,7 @@ import click
 
 from gaas_bot.commands.audit import audit
 from gaas_bot.commands.resolve import resolve
+from gaas_bot.commands.review import review
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 DOTENV_PATH = PACKAGE_DIR.parent.parent / ".env"
@@ -23,4 +24,5 @@ def cli() -> None:
 
 
 cli.add_command(resolve)
+cli.add_command(review)
 cli.add_command(audit)

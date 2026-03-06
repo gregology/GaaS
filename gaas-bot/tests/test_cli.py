@@ -51,3 +51,19 @@ def test_audit_tests_help():
     result = runner.invoke(cli, ["audit", "tests", "--help"])
     assert result.exit_code == 0
     assert "--dry-run" in result.output
+
+
+def test_review_help():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["review", "--help"])
+    assert result.exit_code == 0
+    assert "--pull-request" in result.output
+    assert "--owner" in result.output
+    assert "--repo" in result.output
+    assert "--dry-run" in result.output
+
+
+def test_review_listed_in_cli():
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--help"])
+    assert "review" in result.output
