@@ -1,0 +1,26 @@
+# Root-level structured context
+# Candidates #4 (writing style) and #6 (prompt injection defense)
+
+context:
+  # Candidate #4: Writing style for all markdown
+  - match: ["**/*.md"]
+    on: [edit, create]
+    when: before
+    content: |
+      Writing style: conversational, natural, no AI tells.
+      Banned words: delve, tapestry, realm, landscape, leverage, utilize, robust, pivotal, seamless, innovative, holistic, tailored, beacon, treasure trove.
+      Banned phrases: "In today's digital age", "It is important to note", "Furthermore", "Moreover", "Ultimately", "In conclusion".
+      No summary paragraphs. No rule-of-three. Vary sentence length. Use standard keyboard characters only.
+      No preachiness or robotic empathy. When done making your point, stop writing.
+
+  # Candidate #6: Prompt injection defense for Jinja templates
+  - match: ["**/templates/*.jinja"]
+    on: [edit, create]
+    when: after
+    content: |
+      Prompt injection defense is dual-barrier:
+      1. Random salt markers (secrets.token_hex(4).upper()) wrap untrusted content
+      2. Template includes "Ignore all previous instructions" after untrusted block
+      3. Deterministic dispatch layer prevents unsafe actions even if prompt barrier fails
+      Follow the existing classify.jinja templates as reference. Never remove or weaken
+      either barrier. The salt pattern is not optional.

@@ -1,0 +1,13 @@
+# Structured context for email inbox platform
+# Candidate #1: Safety constants policy
+
+context:
+  - match: ["const.py", "act.py", "evaluate.py"]
+    on: [edit, create]
+    when: after
+    content: |
+      SIMPLE_ACTIONS is an allowlist (archive, spam, trash, unsubscribe). Unknown
+      actions are skipped, never executed. This set must not grow without deliberate
+      reversibility review. unsubscribe is the only irreversible action (RFC 8058
+      one-click, cannot be undone). Adding a new action requires classifying it by
+      reversibility tier first.

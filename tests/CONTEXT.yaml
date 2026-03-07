@@ -1,0 +1,27 @@
+# Structured context for tests
+# Candidate #3: Testing philosophy and safety test reminders
+
+context:
+  # General test guidance
+  - match: ["**/*.py"]
+    on: [edit, create]
+    when: before
+    content: |
+      Test rigor is proportional to irreversibility, not code complexity.
+      Tiers: Read-only (unit tests), Soft reversible (filesystem snapshots),
+      Hard reversible (shadow/dry-run), Irreversible (property-based safety invariants).
+      Test the deterministic dispatch layer (evaluate_automations, check_condition,
+      conditions_match), not LLM output. The LLM is non-deterministic -- asserting
+      on its output is meaningless.
+
+  # Elevated context for safety tests
+  - match: ["safety/**/*.py"]
+    on: [edit, create]
+    when: after
+    content: |
+      Safety tests are the most critical tests in the codebase.
+      When adding new actions:
+      - Update ALLOWED_ACTIONS in both test_automation_invariants.py and test_chaos.py
+      - Add property-based tests covering the new action
+      - Add chaos tests for the new action under garbage inputs
+      - Categorize the action's reversibility tier first
