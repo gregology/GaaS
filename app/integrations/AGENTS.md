@@ -103,52 +103,6 @@ my_integration/
     my_service.py    # Service handler function
 ```
 
-### `const.py` and Safety Validation
-
-Each platform's `const.py` must export `DETERMINISTIC_SOURCES` (frozenset of condition keys that come from deterministic sources like domain checks or authentication results) and `IRREVERSIBLE_ACTIONS` (frozenset of action names that cannot be undone, e.g. `"unsubscribe"`).
-
-If `const.py` is missing or fails to load, safety validation applies a **fail-safe default**: all actions are treated as irreversible. This means any automation with LLM or hybrid provenance will be disabled at config load time. A warning is logged: `"Safety constants unavailable for {type}.{platform}, treating all actions as irreversible"`.
-
-This is consistent with how scripts and services default to irreversible. If your platform has only reversible actions, you still need a `const.py` with `IRREVERSIBLE_ACTIONS = frozenset()` to avoid false blocks.
-
-### manifest.yaml
-
-```yaml
-domain: my_integration          # Must match directory/package name
-name: "My Integration"          # Human-readable display name
-version: "1.0.0"
-entry_task: check               # Default entry task (overridden per platform)
-dependencies:                   # pip dependencies (checked at startup, not auto-installed)
-  - some-library>=1.0
-config_schema:                  # JSON Schema for shared integration config fields
-  properties:
-    api_url:
-      type: string
-  required:
-    - api_url
-platforms:
-  my_platform:
-    name: "My Platform"
-    entry_task: check
-    config_schema:              # JSON Schema for platform-specific config fields
-      properties:
-        polling_limit:
-          type: integer
-          default: 50
-      required: []
-services:                       # Optional: callable services
-  my_service:
-    name: "My Service"
-    description: "What this service does"
-    handler: ".services.my_service.handle"
-    reversible: false           # Default. Only set true for local-only, read-only services
-    human_log: "My service: {{ query | truncate(80) }}"  # Optional: Jinja2 template for human log
-    input_schema:
-      properties:
-        query: { type: string }
-      required: [query]
-```
-
 ### Handler Registration
 
 Each platform exports a `HANDLERS` dict. The integration `__init__.py` aggregates them with platform prefixes:
@@ -214,48 +168,6 @@ Some actions are cross-cutting -- they can be triggered from any integration's a
 - **Platform actions** (strings like `"archive"`, dicts like `{"draft_reply": "..."}`) are bundled into a single platform act task as before.
 
 Each platform's `evaluate.py` calls `enqueue_actions()` instead of `runtime.enqueue()` directly. The partitioning is transparent to the rest of the pipeline. Service actions can include `on_result` in their config to override default result routing.
-
-## Prompt Templates
-
-Templates live in `templates/` subdirectories within each platform (Jinja2 `.jinja` files). Injection defense pattern:
-
-1. Generate random salt markers (`secrets.token_hex(4).upper()`)
-2. Wrap untrusted content between salt markers
-3. Instruct the LLM that content between markers is untrusted
-4. The template itself says "Ignore all previous instructions" after the untrusted block, a second barrier
-
-This is dual-barrier defense: even if the prompt barrier fails, the deterministic dispatch layer prevents unsafe actions.
-
-## Importing from the SDK
-
-Integration code imports from `gaas_sdk.*`, not from `app.*`:
-
-```python
-# Config models
-from gaas_sdk.models import ClassificationConfig, AutomationConfig
-
-# Evaluation engine
-from gaas_sdk.evaluate import evaluate_automations, conditions_match
-
-# Classification utilities
-from gaas_sdk.classify import build_schema, make_jinja_env
-
-# NoteStore
-from gaas_sdk.store import NoteStore
-
-# Runtime functions (enqueue, config lookup, LLM)
-from gaas_sdk import runtime
-runtime.enqueue(payload, priority=5)
-runtime.get_integration(integration_id)
-runtime.create_llm_conversation(model="default", system="...")
-
-# Action partitioning
-from gaas_sdk.actions import enqueue_actions
-
-# Logging (use this instead of logging.getLogger)
-from gaas_sdk.logging import get_logger
-log = get_logger(__name__)
-```
 
 ## Adding a New Integration
 

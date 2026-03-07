@@ -1,0 +1,9 @@
+context:
+  - match: ["const.py", "act.py", "evaluate.py"]
+    on: [edit, create]
+    when: before
+    content: |
+      This platform is currently read-only. SIMPLE_ACTIONS and IRREVERSIBLE_ACTIONS
+      are both empty. When write actions are added, categorize each by reversibility
+      tier first. SIMPLE_ACTIONS is an allowlist -- unknown actions are skipped,
+      never executed.

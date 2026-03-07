@@ -1,0 +1,24 @@
+context:
+  - match: ["queue.py", "queue_policy.py"]
+    on: edit
+    when: before
+    content: |
+      Task IDs encode metadata: {priority}_{timestamp}_{uuid}--{fingerprint}--{task_type}.
+      The -- separated suffix enables zero-YAML-parsing policy checks (dedup via
+      fingerprint glob, rate limiting via task_type glob + timestamp extraction).
+      Atomic dequeue via os.rename() (POSIX atomic). A task must exist in exactly
+      one directory at all times (conservation invariant enforced by stateful
+      property tests in test_queue.py).
+
+decisions:
+  - decision: Filesystem-based queue over Redis/Celery
+    rationale: |
+      Human-inspectable state is the primary driver. You can ls the queue to see
+      what's happening. No Redis dependency, low memory footprint. Consistent with
+      the Principle of Audibility.
+    alternatives:
+      - option: Redis + Celery
+        reason_rejected: Adds infrastructure dependency, state not human-inspectable
+      - option: SQLite
+        reason_rejected: Not as directly inspectable as plain YAML files on disk
+    match: ["queue.py", "queue_policy.py", "worker.py"]

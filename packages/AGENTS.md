@@ -70,9 +70,6 @@ Don't just read the docs. Read the actual code.
 
 These are enforced by CI, safety tests, or the runtime itself. Not guidelines.
 
-- Import from `gaas_sdk.*`, never from `app.*`. The `import-linter` config in `pyproject.toml` enforces this.
 - Every action must be categorized by reversibility tier before you write tests for it.
 - `SIMPLE_ACTIONS` is an allowlist. Unknown string actions are silently skipped at runtime.
 - `IRREVERSIBLE_ACTIONS` from LLM/hybrid provenance are blocked at config load time unless tagged `!yolo`.
-- Prompt templates must use salt-based injection defense. See the email `classify.jinja` for the pattern.
-- Tests import from `gaas_sdk.*` directly and run without the app config singleton.

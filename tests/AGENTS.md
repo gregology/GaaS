@@ -1,21 +1,6 @@
 # Testing
 
-Tests exist to enforce the Principle of Reversibility. The purpose of the test suite is not to reduce bugs generally. It is to guarantee that automated actions cannot cause irreversible harm.
-
-## Core Rule: Test Rigor Proportional to Irreversibility
-
-Every action must be categorized by reversibility tier before tests are written. The tier determines the testing strategy, not the code complexity.
-
-| Tier | Examples | Testing Strategy |
-|------|----------|-----------------|
-| **Read-only** | Checking mailbox, classifying content, reading files | Standard unit tests |
-| **Soft reversible** | Archiving a message, creating a draft | Filesystem snapshot assertions |
-| **Hard reversible** | Marking as spam (may train server filters) | Shadow/dry-run verification |
-| **Irreversible** | Unsubscribing, sending data externally | Property-based safety invariants, mandatory dry run |
-
-## Test the Decision Boundary, Not the LLM
-
-The LLM is non-deterministic. Asserting on its output is meaningless. The automation dispatch layer (`evaluate_automations`, `check_condition`, `conditions_match`) is deterministic and is where bugs become irreversible actions. Tests focus here.
+See `tests/CONTEXT.yaml` for the core testing philosophy (reversibility tiers, decision boundary focus, safety test checklist).
 
 ## Safety Tests (`tests/safety/`)
 
@@ -115,15 +100,6 @@ uv run pytest tests/safety # Safety tests only
 ```
 
 CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sync, pytest.
-
-## When Adding New Actions
-
-1. Categorize the action's reversibility tier
-2. For platform-specific actions: add to `SIMPLE_ACTIONS` or dict action handling in `act.py`. For cross-cutting actions (like scripts): add to `gaas_sdk/actions.py`. For services: declare in the integration's `manifest.yaml`
-3. Write tests matching the tier's strategy (see table above)
-4. Add property-based tests in `test_automation_invariants.py` covering the new action
-5. Add chaos tests in `test_chaos.py` for the new action under garbage inputs
-6. Update the `ALLOWED_ACTIONS` set in both safety test files
 
 ## Test Organization
 
