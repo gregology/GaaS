@@ -1,6 +1,3 @@
-# Structured context for app layer
-# Candidate #7: Queue design decisions
-
 context:
   - match: ["queue.py", "queue_policy.py"]
     on: edit

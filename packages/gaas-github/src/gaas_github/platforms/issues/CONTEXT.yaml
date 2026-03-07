@@ -1,10 +1,7 @@
-# Structured context for GitHub issues platform
-# Candidate #1: Safety constants policy
-
 context:
   - match: ["const.py", "act.py", "evaluate.py"]
     on: [edit, create]
-    when: after
+    when: before
     content: |
       This platform is currently read-only. SIMPLE_ACTIONS and IRREVERSIBLE_ACTIONS
       are both empty. When write actions are added, categorize each by reversibility

@@ -1,6 +1,6 @@
 # gaas-github
 
-The GitHub integration. Handles pull requests and issues via the `gh` CLI. All imports point at `gaas_sdk.*`, not `app.*`.
+The GitHub integration. Handles pull requests and issues via the `gh` CLI.
 
 Discovered at startup via Python entry points. Can be shadowed by a local override during development.
 
@@ -36,20 +36,6 @@ src/gaas_github/
       templates/
         classify.jinja
 ```
-
-## Safety constants
-
-**Pull requests** (`platforms/pull_requests/const.py`):
-- DETERMINISTIC_SOURCES: `org`, `repo`, `author`, `status`, `additions`, `deletions`, `changed_files`
-- IRREVERSIBLE_ACTIONS: empty (no write actions yet)
-- SIMPLE_ACTIONS: empty
-
-**Issues** (`platforms/issues/const.py`):
-- DETERMINISTIC_SOURCES: `org`, `repo`, `author`, `state`, `labels`, `comment_count`
-- IRREVERSIBLE_ACTIONS: empty
-- SIMPLE_ACTIONS: empty
-
-Both platforms are read-only right now. When write actions are added, categorize by reversibility tier first.
 
 ## Key patterns
 

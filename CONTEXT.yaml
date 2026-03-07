@@ -1,8 +1,4 @@
-# Root-level structured context
-# Candidates #4 (writing style) and #6 (prompt injection defense)
-
 context:
-  # Candidate #4: Writing style for all markdown
   - match: ["**/*.md"]
     on: [edit, create]
     when: before
@@ -13,7 +9,6 @@ context:
       No summary paragraphs. No rule-of-three. Vary sentence length. Use standard keyboard characters only.
       No preachiness or robotic empathy. When done making your point, stop writing.
 
-  # Candidate #6: Prompt injection defense for Jinja templates
   - match: ["**/templates/*.jinja"]
     on: [edit, create]
     when: after

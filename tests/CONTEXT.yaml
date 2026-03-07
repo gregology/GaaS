@@ -1,8 +1,4 @@
-# Structured context for tests
-# Candidate #3: Testing philosophy and safety test reminders
-
 context:
-  # General test guidance
   - match: ["**/*.py"]
     on: [edit, create]
     when: before
@@ -14,7 +10,6 @@ context:
       conditions_match), not LLM output. The LLM is non-deterministic -- asserting
       on its output is meaningless.
 
-  # Elevated context for safety tests
   - match: ["safety/**/*.py"]
     on: [edit, create]
     when: after

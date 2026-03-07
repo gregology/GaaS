@@ -16,34 +16,9 @@ The `{integration_id}` is a composite ID in `{type}.{name}` format (e.g. `github
 
 The scheduler (`scheduler.py`) runs inside the FastAPI process, converting `every: 30m` or `cron:` expressions from config into periodic task enqueues. Schedules are created per-platform within each integration.
 
-### Task Queue (`queue.py`)
+### Task Queue (`queue.py`) and Queue Policies (`queue_policy.py`)
 
-A filesystem-based priority queue. Tasks are YAML files that move between directories:
-
-```
-data/queue/
-  pending/    # Waiting to be picked up
-  active/     # Currently being processed
-  done/       # Completed successfully
-  failed/     # Failed with error captured
-```
-
-**Why filesystem?** Human-inspectable state is the primary driver. You can `ls` the queue to see what's happening. Secondary benefits: no Redis dependency, low memory footprint.
-
-Key design decisions:
-- **Task IDs**: `{priority}_{timestamp}_{uuid}--{fingerprint}--{task_type}`, sortable by priority then time. The `--` separated suffix enables zero-YAML-parsing policy checks (dedup via fingerprint glob, rate limiting via task_type glob + timestamp extraction).
-- **Atomic dequeue**: Uses `os.rename()` which is atomic on POSIX. If another worker grabs the file first, `FileNotFoundError` is caught and `None` returned.
-- **Priority**: 0-9, lower number = higher priority. Dequeue processes lowest-numbered files first via sorted filename listing.
-- **Task conservation**: A task must exist in exactly one directory at all times. Tests verify this invariant with stateful property testing.
-- **Result capture**: `complete()` accepts an optional `result` dict. When present, it's stored in the completed task YAML alongside `completed_at`. Service handlers return result dicts; platform handlers return None.
-
-### Queue Policies (`queue_policy.py`)
-
-Wraps `queue.enqueue()` with config-driven dedup and rate limiting. `resolve_policy()` looks up the effective policy for a task type (override or default from `config.queue_policies`). `policy_enqueue()` runs the checks and either calls through to `queue.enqueue()` or returns `None` with an info log.
-
-Dedup globs for `*--{fingerprint}--{task_type}.yaml` in `pending/`. Rate limiting globs for `*--*--{task_type}.yaml` across all dirs and filters by timestamp extracted from the filename. Both work without parsing any YAML.
-
-Manual API triggers (`POST /integrations/.../run`) call `queue.enqueue()` directly, bypassing policies. The scheduler and `runtime.enqueue()` (used by automation-driven code) go through `policy_enqueue()`.
+See `app/CONTEXT.yaml` for design decisions and invariants.
 
 ### Runtime Init (`runtime_init.py`)
 

@@ -1,6 +1,6 @@
 # gaas-email
 
-The email integration, extracted from the original `app/integrations/email/`. Handles IMAP inbox polling, LLM classification, automation evaluation, and action execution. All imports point at `gaas_sdk.*`, not `app.*`.
+The email integration, extracted from the original `app/integrations/email/`. Handles IMAP inbox polling, LLM classification, automation evaluation, and action execution.
 
 Discovered at startup via Python entry points (`[project.entry-points."gaas.integrations"]` in pyproject.toml). Can be shadowed by a local override in `app/integrations/email/` or a custom integrations directory during development.
 
@@ -25,12 +25,6 @@ src/gaas_email/
         classify.jinja       # Classification prompt with salt-based injection defense
 ```
 
-## Safety constants (`const.py`)
-
-- **DETERMINISTIC_SOURCES**: `authentication`, `calendar`, `domain`, `from_address`, `has_attachments`, `is_answered`, `is_calendar_event`, `is_forward`, `is_noreply`, `is_read`, `is_reply`, `is_starred`, `is_unsubscribable`
-- **IRREVERSIBLE_ACTIONS**: `unsubscribe`
-- **SIMPLE_ACTIONS**: `archive`, `spam`, `trash`, `unsubscribe` -- the allowlist. Unknown actions are skipped, never executed. This set must not grow without reversibility review.
-
 ## Pipeline
 
 `check -> collect -> classify -> evaluate -> act`
@@ -53,8 +47,6 @@ Run in isolation (no app config needed):
 ```bash
 uv run pytest packages/gaas-email/tests/
 ```
-
-Tests import from `gaas_sdk.*` directly. This means they run without loading the app config singleton.
 
 ## Key patterns
 

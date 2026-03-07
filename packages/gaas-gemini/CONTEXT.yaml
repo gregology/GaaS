@@ -1,17 +1,12 @@
-# Structured context for gaas-gemini
-# Candidate #2 (SDK import boundary), #5 (manifest spec), #8 (two-pass pattern)
-
 context:
-  # Candidate #2: SDK import boundary rule
   - match: ["**/*.py"]
     on: [edit, create]
-    when: after
+    when: before
     content: |
       Integration code imports from gaas_sdk.*, never from app.*.
       The import-linter config in pyproject.toml enforces this boundary.
       Run `uv run lint-imports` to verify after changes.
 
-  # Candidate #5: manifest.yaml schema guidance
   - match: ["**/manifest.yaml"]
     on: [edit, create]
     when: before

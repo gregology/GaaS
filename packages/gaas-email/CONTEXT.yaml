@@ -1,17 +1,12 @@
-# Structured context for gaas-email package
-# Candidate #2 (SDK import boundary), #5 (manifest + const.py spec), #6 (prompt injection)
-
 context:
-  # Candidate #2: SDK import boundary rule
   - match: ["**/*.py"]
     on: [edit, create]
-    when: after
+    when: before
     content: |
       Integration code imports from gaas_sdk.*, never from app.*.
       The import-linter config in pyproject.toml enforces this boundary.
       Run `uv run lint-imports` to verify after changes.
 
-  # Candidate #5: manifest.yaml schema guidance
   - match: ["**/manifest.yaml"]
     on: [edit, create]
     when: before
@@ -23,10 +18,9 @@ context:
       Services are irreversible by default. Only set reversible: true for services
       that are both read-only AND do not transmit data beyond the system boundary.
 
-  # Candidate #5: const.py safety contract
   - match: ["**/const.py"]
     on: [edit, create]
-    when: after
+    when: before
     content: |
       const.py must export DETERMINISTIC_SOURCES (frozenset of condition keys from
       deterministic sources) and IRREVERSIBLE_ACTIONS (frozenset of actions that
@@ -35,7 +29,6 @@ context:
       reversible actions, you need IRREVERSIBLE_ACTIONS = frozenset() to avoid
       false blocks.
 
-  # Candidate #6: Prompt injection defense for Jinja templates
   - match: ["**/templates/*.jinja"]
     on: [edit, create]
     when: after
