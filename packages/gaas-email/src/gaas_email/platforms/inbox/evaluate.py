@@ -9,7 +9,6 @@ from gaas_sdk.evaluate import (
     MISSING,
     evaluate_automations,
     resolve_action_provenance,
-    unwrap_actions,
 )
 from gaas_sdk.task import TaskRecord
 from .const import DEFAULT_CLASSIFICATIONS, DETERMINISTIC_SOURCES
@@ -119,10 +118,10 @@ def handle(task: TaskRecord):
 
         log.info(
             "email.inbox.evaluate: queuing actions for message_id=%s actions=%s provenance=%s",
-            message_id, unwrap_actions(actions), provenance,
+            message_id, actions, provenance,
         )
         enqueue_actions(
-            actions=unwrap_actions(actions),
+            actions=actions,
             platform_payload={
                 "type": "email.inbox.act",
                 "integration": integration_id,

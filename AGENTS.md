@@ -29,7 +29,7 @@ AI has ability but no accountability. Every non-reversible action requires a hum
 
 ## Provenance Tracking
 
-When an action is triggered by LLM classification vs. deterministic rules (e.g. domain-based filtering), the system tracks the provenance. Every automation rule is assigned `rule`, `llm`, or `hybrid` provenance based on its condition keys. Irreversible actions are blocked from `llm` and `hybrid` provenance unless explicitly overridden with the `!yolo` tag. See `packages/gaas-email/AGENTS.md` for the email provenance model, and `tests/safety/test_provenance.py` for the safety tests that enforce it.
+When an action is triggered by LLM classification vs. deterministic rules (e.g. domain-based filtering), the system tracks the provenance. Every automation rule is assigned `rule`, `llm`, or `hybrid` provenance based on its condition keys. Irreversible actions are blocked from `llm` and `hybrid` provenance unless explicitly overridden with the `!yolo` tag. This is enforced at two layers: config load time (primary gate, strips unsafe automations) and execution time in each platform's `act.py` (defense-in-depth). See `packages/gaas-email/AGENTS.md` for the email provenance model, and `tests/safety/test_provenance.py` for the safety tests that enforce it.
 
 ## Tech Stack
 
