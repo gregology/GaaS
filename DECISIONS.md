@@ -16,7 +16,7 @@ This framing drives feature prioritization. If a feature doesn't help the user r
 
 ### Three principles are structural, not aspirational
 
-Reversibility, audibility, and accountability are enforced in code. They're not guidelines. Reversibility is enforced by the provenance system blocking irreversible actions from non-deterministic sources at config load time. Audibility is enforced by `log.human()` writing to daily markdown files. Accountability is enforced by the separation between LLM classification and deterministic dispatch.
+Reversibility, audibility, and accountability are enforced in code. They're not guidelines. Reversibility is enforced by the provenance system blocking irreversible actions from non-deterministic sources at config load time, with a defense-in-depth runtime check in each platform's `act.py`. Audibility is enforced by `log.human()` writing to daily markdown files. Accountability is enforced by the separation between LLM classification and deterministic dispatch.
 
 If a principle can't be enforced in code, it needs to be redesigned until it can.
 
@@ -182,11 +182,17 @@ When an automation has both deterministic conditions (`domain: work.com`) and no
 
 The reasoning: if any part of the decision was made by a non-deterministic system, the whole decision inherits that uncertainty. One trustworthy condition doesn't make an untrustworthy condition more trustworthy.
 
-### Safety validation at config load time, not runtime
+### Safety validation at config load time as the primary gate
 
 Irreversible actions with `llm` or `hybrid` provenance are stripped from the automation list when the config loads. The system cannot be talked into running them later. A startup warning is logged explaining what was disabled and why.
 
-Why: runtime gating is a bug waiting to happen. If the safety check is a conditional at execution time, a code path change could skip it. By stripping unsafe automations before the server starts, the worker physically cannot encounter them.
+Why: config-time stripping is the strongest guarantee. By removing unsafe automations before the server starts, the worker physically cannot encounter them in normal operation.
+
+### Runtime provenance check as defense-in-depth
+
+Each platform's `act.py` also checks provenance before executing irreversible actions. If an action is in `IRREVERSIBLE_ACTIONS` and provenance is `llm` or `hybrid`, it's skipped with a warning log — unless the action carries the `!yolo` marker (preserved as `{"!yolo": action}` in the task payload).
+
+Why: config-time validation is the primary gate, but it's not the only code path. The manual trigger endpoints (`POST /integrations/{id}/run`) call `queue.enqueue()` directly, bypassing `policy_enqueue()` and config-time validation. If a handler constructs a task with irreversible actions from a non-config code path, the runtime check catches it. This follows the zero-trust principle: the dispatch layer should not assume its inputs were pre-validated.
 
 ### Reference validation warns but does not disable
 

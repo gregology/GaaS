@@ -75,7 +75,7 @@ The dispatch layer enforces:
 
 - Only known actions can be produced. Unknown strings are rejected with a warning.
 - The `SIMPLE_ACTIONS` allowlist in `const.py` controls what actions exist at all.
-- Irreversible actions are blocked from `llm` and `hybrid` provenance (unless `!yolo`).
+- Irreversible actions are blocked from `llm` and `hybrid` provenance (unless `!yolo`) — at config load time (primary gate) and again at execution time in `act.py` (defense-in-depth).
 - Missing classification keys cause automations to silently not fire (safe default).
 
 The key insight is that these two boundaries are independent. Even if the prompt barrier fails completely and an attacker manipulates the LLM into classifying a phishing email as "high priority, requires response," the dispatch layer still controls what actions can actually happen. The worst outcome from a manipulated classification is a draft reply or an archive, both of which are reversible.

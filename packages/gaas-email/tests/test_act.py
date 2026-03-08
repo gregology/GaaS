@@ -1,7 +1,12 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from gaas_email.platforms.inbox.act import _execute_action, handle
+from gaas_email.platforms.inbox.act import (
+    _execute_action,
+    _is_irreversible,
+    _unwrap_yolo,
+    handle,
+)
 from gaas_email.platforms.inbox.const import SIMPLE_ACTIONS
 
 
@@ -249,3 +254,187 @@ class TestHandle:
 
         # Should not raise — provenance defaults to "unknown" via .get()
         handle(task)
+
+
+class TestRuntimeProvenanceCheck:
+    """Runtime defense-in-depth: irreversible actions are blocked when
+    provenance is 'llm' or 'hybrid', unless explicitly !yolo-tagged."""
+
+    def _mock_email(self):
+        email = MagicMock()
+        email._message_id = "<test@example.com>"
+        email.archive = MagicMock()
+        email.spam = MagicMock()
+        email.trash = MagicMock()
+        email.unsubscribe = MagicMock()
+        email.draft_reply = MagicMock()
+        email.move_to = MagicMock()
+        return email
+
+    def _make_task(self, actions, provenance=None):
+        task = {
+            "id": "task-001",
+            "created_at": "2026-03-08T00:00:00",
+            "status": "active",
+            "priority": 5,
+            "payload": {
+                "type": "email.inbox.act",
+                "integration": "email.personal",
+                "uid": "12345",
+                "actions": actions,
+            },
+        }
+        if provenance is not None:
+            task["provenance"] = provenance
+        return task
+
+    def _mock_integration(self):
+        integration = MagicMock()
+        integration.name = "personal"
+        integration.imap_server = "imap.example.com"
+        integration.imap_port = 993
+        integration.username = "user@example.com"
+        integration.password = "secret"
+        return integration
+
+    def _setup_mailbox(self, MockMailbox, mock_runtime, email):
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = None
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_irreversible_action_blocked_from_llm_provenance(
+        self, MockMailbox, mock_runtime
+    ):
+        """Unsubscribe with provenance=llm is skipped at runtime."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["unsubscribe"], provenance="llm")
+        handle(task)
+
+        email.unsubscribe.assert_not_called()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_irreversible_action_blocked_from_hybrid_provenance(
+        self, MockMailbox, mock_runtime
+    ):
+        """Unsubscribe with provenance=hybrid is skipped at runtime."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["unsubscribe"], provenance="hybrid")
+        handle(task)
+
+        email.unsubscribe.assert_not_called()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_irreversible_action_allowed_from_rule_provenance(
+        self, MockMailbox, mock_runtime
+    ):
+        """Unsubscribe with provenance=rule executes normally."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["unsubscribe"], provenance="rule")
+        handle(task)
+
+        email.unsubscribe.assert_called_once()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_reversible_actions_execute_alongside_blocked_irreversible(
+        self, MockMailbox, mock_runtime
+    ):
+        """Archive executes normally even when unsubscribe is blocked."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["archive", "unsubscribe"], provenance="llm")
+        handle(task)
+
+        email.archive.assert_called_once()
+        email.unsubscribe.assert_not_called()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_yolo_irreversible_action_executes_from_llm_provenance(
+        self, MockMailbox, mock_runtime
+    ):
+        """!yolo-wrapped unsubscribe executes even with provenance=llm."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(
+            [{"!yolo": "unsubscribe"}], provenance="llm"
+        )
+        handle(task)
+
+        email.unsubscribe.assert_called_once()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_blocked_action_logs_warning(self, MockMailbox, mock_runtime, caplog):
+        """Blocked irreversible action emits a warning log."""
+        import logging
+
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["unsubscribe"], provenance="llm")
+        with caplog.at_level(logging.WARNING):
+            handle(task)
+
+        assert any("BLOCKED" in msg and "unsubscribe" in msg for msg in caplog.messages)
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_irreversible_action_allowed_from_unknown_provenance(
+        self, MockMailbox, mock_runtime
+    ):
+        """provenance=unknown (default) does not block — only llm/hybrid are blocked."""
+        email = self._mock_email()
+        self._setup_mailbox(MockMailbox, mock_runtime, email)
+
+        task = self._make_task(["unsubscribe"])  # no provenance → "unknown"
+        handle(task)
+
+        email.unsubscribe.assert_called_once()
+
+
+class TestUnwrapYolo:
+    def test_plain_action_not_yolo(self):
+        action, yolo = _unwrap_yolo("archive")
+        assert action == "archive"
+        assert yolo is False
+
+    def test_yolo_wrapped_action(self):
+        action, yolo = _unwrap_yolo({"!yolo": "unsubscribe"})
+        assert action == "unsubscribe"
+        assert yolo is True
+
+    def test_regular_dict_not_yolo(self):
+        action, yolo = _unwrap_yolo({"draft_reply": "Hi"})
+        assert action == {"draft_reply": "Hi"}
+        assert yolo is False
+
+
+class TestIsIrreversible:
+    def test_unsubscribe_is_irreversible(self):
+        assert _is_irreversible("unsubscribe") is True
+
+    def test_archive_is_reversible(self):
+        assert _is_irreversible("archive") is False
+
+    def test_dict_with_irreversible_key(self):
+        assert _is_irreversible({"unsubscribe": True}) is True
+
+    def test_dict_without_irreversible_key(self):
+        assert _is_irreversible({"draft_reply": "Hi"}) is False

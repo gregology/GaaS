@@ -2,13 +2,32 @@ import logging
 
 from gaas_sdk import runtime
 from gaas_sdk.task import TaskRecord
-from .const import SIMPLE_ACTIONS
+from .const import IRREVERSIBLE_ACTIONS, SIMPLE_ACTIONS
 from .store import EmailStore
 
 log = logging.getLogger(__name__)
 
 # Actions that move the email to a different IMAP folder — the note mirrors it.
 _FOLDER_MOVES: frozenset[str] = frozenset({"archive", "spam", "trash"})
+
+# Provenances that are not fully deterministic.
+_UNSAFE_PROVENANCES: frozenset[str] = frozenset({"llm", "hybrid"})
+
+
+def _unwrap_yolo(action) -> tuple:
+    """Unwrap a ``{"!yolo": inner}`` payload marker, returning (inner, is_yolo)."""
+    if isinstance(action, dict) and "!yolo" in action:
+        return action["!yolo"], True
+    return action, False
+
+
+def _is_irreversible(action) -> bool:
+    """Check if a raw action (string or dict) is irreversible."""
+    if isinstance(action, str):
+        return action in IRREVERSIBLE_ACTIONS
+    if isinstance(action, dict):
+        return bool(set(action.keys()) & IRREVERSIBLE_ACTIONS)
+    return False
 
 
 def _execute_action(email, action) -> None:
@@ -52,6 +71,16 @@ def handle(task: TaskRecord):
         message_id = email._message_id or f"imap_{uid}"
 
         for action in actions:
+            action, yolo = _unwrap_yolo(action)
+
+            if _is_irreversible(action) and provenance in _UNSAFE_PROVENANCES and not yolo:
+                log.warning(
+                    "email.inbox.act: BLOCKED irreversible action %r "
+                    "(provenance=%s, yolo=%s), skipping",
+                    action, provenance, yolo,
+                )
+                continue
+
             _execute_action(email, action)
             if store:
                 if isinstance(action, str) and action in _FOLDER_MOVES:

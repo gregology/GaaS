@@ -21,6 +21,7 @@ from gaas_sdk.models import (
     ScriptAction,
     ServiceAction,
     SimpleAction,
+    YoloAction,
 )
 from gaas_sdk.protocols import ResolveValue
 
@@ -131,8 +132,24 @@ def _action_to_dict(action: ActionType) -> str | dict[str, Any]:
     return action
 
 
+def _unwrap_yolo(action: ActionType | YoloAction) -> tuple[ActionType, bool]:
+    """Unwrap a potential YoloAction, returning (inner_action, is_yolo)."""
+    if isinstance(action, YoloAction):
+        from gaas_sdk.models import _normalize_action
+        return _normalize_action(action.value), True
+    return action, False
+
+
+def _action_to_payload(action: ActionType, yolo: bool) -> str | dict[str, Any]:
+    """Convert an action model to its payload form, preserving !yolo marker."""
+    raw = _action_to_dict(action)
+    if yolo:
+        return {"!yolo": raw}
+    return raw
+
+
 def enqueue_actions(
-    actions: list[ActionType],
+    actions: list[ActionType | YoloAction],
     platform_payload: dict[str, Any],
     resolve_value: ResolveValue,
     classification: dict[str, Any],
@@ -144,11 +161,15 @@ def enqueue_actions(
     Script actions become individual script.run queue tasks.
     Service actions become individual service.* queue tasks.
     Remaining platform actions are bundled into a single platform act task.
+
+    YoloAction wrappers are preserved as ``{"!yolo": raw_action}`` in the
+    payload so that runtime provenance checks can honour the override.
     """
     platform_actions: list[str | dict[str, Any]] = []
     for action in actions:
-        if isinstance(action, ScriptAction):
-            script_ref = action.script
+        inner, yolo = _unwrap_yolo(action)
+        if isinstance(inner, ScriptAction):
+            script_ref = inner.script
             script_name = script_ref.get("name", "") if isinstance(script_ref, dict) else script_ref
             raw_inputs = script_ref.get("inputs", {}) if isinstance(script_ref, dict) else {}
             resolved_inputs = resolve_inputs(raw_inputs, resolve_value, classification)
@@ -158,8 +179,8 @@ def enqueue_actions(
                 "inputs": resolved_inputs,
             }, priority=priority, provenance=provenance)
             log.info("Enqueued script.run for script=%s inputs=%s", script_name, resolved_inputs)
-        elif isinstance(action, ServiceAction):
-            service_ref = action.service
+        elif isinstance(inner, ServiceAction):
+            service_ref = inner.service
             call = service_ref.get("call", "")
             raw_inputs = service_ref.get("inputs", {})
             resolved_inputs = resolve_inputs(raw_inputs, resolve_value, classification)
@@ -187,7 +208,7 @@ def enqueue_actions(
             else:
                 log.warning("Invalid service call format: %r (expected type.name.service)", call)
         else:
-            platform_actions.append(_action_to_dict(action))
+            platform_actions.append(_action_to_payload(inner, yolo))
 
     if platform_actions:
         platform_payload["actions"] = platform_actions

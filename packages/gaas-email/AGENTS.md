@@ -18,7 +18,7 @@ src/gaas_email/
       collect.py             # Download and parse individual emails
       classify.py            # LLM classification using Jinja prompt templates
       evaluate.py            # Evaluate automations against classification results
-      act.py                 # Execute actions (archive, spam, trash, unsubscribe, draft_reply, move_to)
+      act.py                 # Execute actions (archive, spam, trash, unsubscribe, draft_reply, move_to) with runtime provenance check
       store.py               # EmailStore wrapping NoteStore with email-specific methods
       const.py               # Safety constants
       templates/
