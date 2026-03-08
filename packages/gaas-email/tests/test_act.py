@@ -1,6 +1,7 @@
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from gaas_email.platforms.inbox.act import _execute_action
+from gaas_email.platforms.inbox.act import _execute_action, handle
 from gaas_email.platforms.inbox.const import SIMPLE_ACTIONS
 
 
@@ -68,3 +69,183 @@ class TestExecuteAction:
         """The set of simple actions is explicitly defined and should not grow
         without deliberate review of reversibility tiers."""
         assert {"archive", "spam", "trash", "unsubscribe"} == SIMPLE_ACTIONS
+
+
+class TestHandle:
+    """Tests for handle() — the orchestration function that connects to IMAP,
+    fetches an email by UID, runs actions, and syncs the note store."""
+
+    def _mock_email(self):
+        email = MagicMock()
+        email._message_id = "<test@example.com>"
+        email.archive = MagicMock()
+        email.spam = MagicMock()
+        email.trash = MagicMock()
+        email.unsubscribe = MagicMock()
+        email.draft_reply = MagicMock()
+        email.move_to = MagicMock()
+        return email
+
+    def _make_task(self, actions, provenance=None):
+        task = {
+            "id": "task-001",
+            "created_at": "2026-03-08T00:00:00",
+            "status": "active",
+            "priority": 5,
+            "payload": {
+                "type": "email.inbox.act",
+                "integration": "email.personal",
+                "uid": "12345",
+                "actions": actions,
+            },
+        }
+        if provenance is not None:
+            task["provenance"] = provenance
+        return task
+
+    def _mock_integration(self):
+        integration = MagicMock()
+        integration.name = "personal"
+        integration.imap_server = "imap.example.com"
+        integration.imap_port = 993
+        integration.username = "user@example.com"
+        integration.password = "secret"
+        return integration
+
+    @patch("gaas_email.platforms.inbox.act.EmailStore")
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_dispatches_actions(self, MockMailbox, mock_runtime, MockStore):
+        email = self._mock_email()
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = None
+
+        task = self._make_task(["archive", "spam"])
+        handle(task)
+
+        MockMailbox.assert_called_once_with(
+            imap_server="imap.example.com",
+            imap_port=993,
+            username="user@example.com",
+            password="secret",
+        )
+        mb.get_email.assert_called_once_with("12345")
+        email.archive.assert_called_once()
+        email.spam.assert_called_once()
+
+    @patch("gaas_email.platforms.inbox.act.EmailStore")
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_store_sync_folder_moves(self, MockMailbox, mock_runtime, MockStore):
+        email = self._mock_email()
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = Path("/notes")
+
+        store_instance = MagicMock()
+        MockStore.return_value = store_instance
+
+        for action in ["archive", "spam", "trash", {"move_to": "Receipts"}]:
+            store_instance.reset_mock()
+            task = self._make_task([action])
+            handle(task)
+            store_instance.move_to_subdir.assert_called_once_with(
+                "<test@example.com>", "synced"
+            )
+
+    @patch("gaas_email.platforms.inbox.act.EmailStore")
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_store_no_sync_for_non_folder_actions(
+        self, MockMailbox, mock_runtime, MockStore
+    ):
+        email = self._mock_email()
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = Path("/notes")
+
+        store_instance = MagicMock()
+        MockStore.return_value = store_instance
+
+        for action in ["unsubscribe", {"draft_reply": "Thanks!"}]:
+            store_instance.reset_mock()
+            task = self._make_task([action])
+            handle(task)
+            store_instance.move_to_subdir.assert_not_called()
+
+    @patch("gaas_email.platforms.inbox.act.EmailStore")
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_no_notes_dir(self, MockMailbox, mock_runtime, MockStore):
+        email = self._mock_email()
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = None
+
+        task = self._make_task(["archive"])
+        handle(task)
+
+        MockStore.assert_not_called()
+        email.archive.assert_called_once()
+
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_imap_error_propagates(self, MockMailbox, mock_runtime):
+        mb = MagicMock()
+        mb.get_email.side_effect = Exception("IMAP connection lost")
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = None
+
+        task = self._make_task(["archive"])
+        try:
+            handle(task)
+            assert False, "Expected exception to propagate"
+        except Exception as e:
+            assert str(e) == "IMAP connection lost"
+
+    @patch("gaas_email.platforms.inbox.act.EmailStore")
+    @patch("gaas_email.platforms.inbox.act.runtime")
+    @patch("gaas_email.mail.Mailbox")
+    def test_handle_provenance_defaults_to_unknown(
+        self, MockMailbox, mock_runtime, MockStore
+    ):
+        email = self._mock_email()
+        mb = MagicMock()
+        mb.get_email.return_value = email
+        mb.__enter__ = MagicMock(return_value=mb)
+        mb.__exit__ = MagicMock(return_value=False)
+        MockMailbox.return_value = mb
+
+        mock_runtime.get_integration.return_value = self._mock_integration()
+        mock_runtime.get_notes_dir.return_value = None
+
+        task = self._make_task(["archive"])
+        assert "provenance" not in task
+
+        # Should not raise — provenance defaults to "unknown" via .get()
+        handle(task)
