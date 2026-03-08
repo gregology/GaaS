@@ -18,7 +18,7 @@ The scheduler (`scheduler.py`) runs inside the FastAPI process, converting `ever
 
 ### Task Queue (`queue.py`) and Queue Policies (`queue_policy.py`)
 
-See `app/CONTEXT.yaml` for design decisions and invariants.
+See `app/AGENTS.yaml` for design decisions and invariants.
 
 ### Runtime Init (`runtime_init.py`)
 

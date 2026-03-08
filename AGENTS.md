@@ -155,7 +155,7 @@ Both `config.yaml` and `secrets.yaml` are gitignored. Tests create a minimal con
 ## Safety-Critical Patterns
 
 1. **LLM output is untrusted input.** Schema validation with retries, but the dispatch layer enforces what actions are possible, not the LLM.
-2. **Test rigor is proportional to irreversibility**, not code complexity. See `tests/CONTEXT.yaml`.
+2. **Test rigor is proportional to irreversibility**, not code complexity. See `tests/AGENTS.yaml`.
 3. **Unknown actions are rejected.** `act.py` has an explicit allowlist (`SIMPLE_ACTIONS`). Unknown string or dict actions are skipped with a warning.
 4. **The `SIMPLE_ACTIONS` set must not grow without deliberate reversibility review.** Adding a new action requires classifying it by reversibility tier first.
 5. **Scripts are irreversible by default.** The system can't statically verify what shell code does. `reversible: true` is an explicit opt-in on the script definition. Without it, script actions are blocked from `llm`/`hybrid` provenance unless wrapped in `!yolo`.

@@ -1,6 +1,6 @@
 # Testing
 
-See `tests/CONTEXT.yaml` for the core testing philosophy (reversibility tiers, decision boundary focus, safety test checklist).
+See `tests/AGENTS.yaml` for the core testing philosophy (reversibility tiers, decision boundary focus, safety test checklist).
 
 ## Safety Tests (`tests/safety/`)
 
