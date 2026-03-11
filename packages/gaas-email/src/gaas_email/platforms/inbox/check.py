@@ -59,7 +59,7 @@ def handle(task: TaskRecord):
         store.move_to_subdir(mid, "synced")
 
     # Enqueue collect for every inbox email (upsert: creates new or refreshes mutable fields).
-    for mid, uid in inbox_by_mid.items():
+    for _mid, uid in inbox_by_mid.items():
         runtime.enqueue({
             "type": "email.inbox.collect",
             "integration": integration_id,
@@ -67,6 +67,8 @@ def handle(task: TaskRecord):
         }, priority=3)
 
     log.info(
-        "email.inbox.check: %d in inbox, %d in notes, %d moved to synced/, %d collect tasks queued",
-        len(inbox_mids), len(note_mids), len(synced), len(inbox_by_mid),
+        "email.inbox.check: %d in inbox, %d in notes, "
+        "%d moved to synced/, %d collect tasks queued",
+        len(inbox_mids), len(note_mids),
+        len(synced), len(inbox_by_mid),
     )

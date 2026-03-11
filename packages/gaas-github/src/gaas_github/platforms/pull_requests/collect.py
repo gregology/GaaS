@@ -18,7 +18,10 @@ def handle(task: TaskRecord):
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.pull_requests.collect: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
+    log.info(
+        "github.pull_requests.collect: %s/%s#%d (integration=%s)",
+        org, repo, number, integration_id,
+    )
 
     client = GitHubClient()
     pr = client.get_pr(org, repo, number)

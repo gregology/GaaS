@@ -73,7 +73,7 @@ class TestSecretMasking:
             response = client.get("/ui/config")
             for secret in secret_values:
                 assert secret not in response.text, (
-                    f"Secret value leaked in config page"
+                    "Secret value leaked in config page"
                 )
 
 

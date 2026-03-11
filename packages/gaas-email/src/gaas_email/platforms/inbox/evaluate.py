@@ -89,7 +89,10 @@ def handle(task: TaskRecord):
     integration = runtime.get_integration(integration_id)
     platform = runtime.get_platform(integration_id, "inbox")
     message_id = task["payload"]["message_id"]
-    log.info("email.inbox.evaluate: message_id=%s (integration=%s)", message_id, integration_id)
+    log.info(
+        "email.inbox.evaluate: message_id=%s (integration=%s)",
+        message_id, integration_id,
+    )
 
     notes_dir = runtime.get_notes_dir()
     store = EmailStore(path=notes_dir / "emails" / integration.name)
@@ -108,7 +111,10 @@ def handle(task: TaskRecord):
 
     classifications = platform.classifications or DEFAULT_CLASSIFICATIONS
     resolve_value = _make_resolver(snapshot)
-    actions = evaluate_automations(platform.automations, resolve_value, classification, classifications)
+    actions = evaluate_automations(
+        platform.automations, resolve_value,
+        classification, classifications,
+    )
 
     if actions:
         provenance = resolve_action_provenance(

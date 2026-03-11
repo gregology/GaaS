@@ -71,6 +71,14 @@ module = "app.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
+module = "gaas_email.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "gaas_github.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
 disable_error_code = ["no-untyped-def"]
@@ -84,6 +92,7 @@ module = [
     "ruamel.*",
     "complexipy.*",
     "bs4.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 
@@ -95,12 +104,16 @@ select = ["E", "F", "W", "ANN", "UP", "RUF", "B", "SIM"]
 ignore = ["ANN401", "ANN204"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN"]
-"packages/*/tests/**/*.py" = ["ANN"]
+"tests/**/*.py" = ["ANN", "B011", "B017", "E501", "RUF012", "RUF043", "RUF059", "F841", "SIM105", "SIM117", "SIM201"]
+"packages/*/tests/**/*.py" = ["ANN", "B011", "B017", "E501", "RUF012", "RUF043", "RUF059", "F841", "SIM105", "SIM117", "SIM201"]
+"app/main.py" = ["E402"]
 "app/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202"]
 "packages/gaas-email/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202"]
 "packages/gaas-github/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202"]
 "packages/gaas-gemini/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202"]
+
+[tool.bandit]
+skips = ["B101", "B404", "B603", "B607"]
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]

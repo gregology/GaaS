@@ -124,7 +124,10 @@ class Email:
         folder = self._mailbox._folder("\\Archive")
         self._mailbox._move(self._uid, folder)
         subject = self.subject[:25] + "…" if len(self.subject) > 25 else self.subject
-        log.human("Archived email from **%s** — `%s` (uid %s)", self.from_address, subject, self._uid)
+        log.human(
+            "Archived email from **%s** — `%s` (uid %s)",
+            self.from_address, subject, self._uid,
+        )
 
     def spam(self) -> None:
         folder = self._mailbox._folder("\\Junk")
@@ -149,7 +152,10 @@ class Email:
         reply["Subject"] = f"Re: {subject}" if not subject.lower().startswith("re:") else subject
         if self._message_id:
             reply["In-Reply-To"] = self._message_id
-            refs = f"{self._references} {self._message_id}".strip() if self._references else self._message_id
+            refs = (
+                f"{self._references} {self._message_id}".strip()
+                if self._references else self._message_id
+            )
             reply["References"] = refs
         reply.set_content(contents)
 
@@ -196,7 +202,9 @@ class Mailbox:
             log.info("IMAP connected to %s as %s", self._imap_server, self._username)
             log.info("Discovered folders: %s", self._folders)
 
-    def inbox_message_ids(self, limit: int = 500, since: date | None = None) -> list[tuple[str, str]]:
+    def inbox_message_ids(
+        self, limit: int = 500, since: date | None = None,
+    ) -> list[tuple[str, str]]:
         """Fetch (uid, message_id) pairs from the inbox using headers-only fetch.
 
         Returns a list of (uid, raw_message_id) tuples, newest first.

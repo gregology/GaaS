@@ -70,7 +70,7 @@ class ManagedProcess:
 _shutting_down = False
 
 
-def _shutdown_handler(signum, frame):
+def _shutdown_handler(signum, _frame):
     global _shutting_down
     _shutting_down = True
 
@@ -105,7 +105,10 @@ def main():
     for child in children:
         child.start()
 
-    log.info("Supervisor running (dev=%s, host=%s, port=%d). Press Ctrl+C to stop.", args.dev, host, args.port)
+    log.info(
+        "Supervisor running (dev=%s, host=%s, port=%d). Press Ctrl+C to stop.",
+        args.dev, host, args.port,
+    )
 
     try:
         while not _shutting_down:

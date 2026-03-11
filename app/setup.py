@@ -237,7 +237,10 @@ def setup_github() -> list[dict]:
     if pr_enabled:
         platforms["pull_requests"] = {
             "classifications": {
-                "complexity": "how complex is this PR to review? 0 = trivial, 1 = major architectural change",
+                "complexity": (
+                    "how complex is this PR to review?"
+                    " 0 = trivial, 1 = major architectural change"
+                ),
                 "risk": "how risky is this change? 0 = no risk, 1 = high risk of breaking things",
             }
         }
@@ -295,7 +298,7 @@ def setup_directories() -> dict:
         dirs["logs"] = _prompt("Logs directory", dirs["logs"])
 
     # Create directories
-    for key, path in dirs.items():
+    for _key, path in dirs.items():
         Path(path).mkdir(parents=True, exist_ok=True)
     _success("Directories created")
 
@@ -477,10 +480,23 @@ def run_setup(reconfigure: bool = False) -> int:
     _success("Setup complete!")
     print()
     _info("Next steps:")
-    _info(f"  1. Review your config:  {BOLD}cat {config_path}{NC}" if _color() else f"  1. Review your config:  cat {config_path}")
-    _info(f"  2. Check your setup:    {BOLD}gaas doctor{NC}" if _color() else f"  2. Check your setup:    gaas doctor")
-    _info(f"  3. Start GaaS:          {BOLD}gaas start{NC}" if _color() else f"  3. Start GaaS:          gaas start")
-    _info(f"  Full config reference:  {BOLD}{PROJECT_ROOT / 'example.config.yaml'}{NC}" if _color() else f"  Full config reference:  {PROJECT_ROOT / 'example.config.yaml'}")
+    if _color():
+        _info(f"  1. Review your config:  {BOLD}cat {config_path}{NC}")
+    else:
+        _info(f"  1. Review your config:  cat {config_path}")
+    if _color():
+        _info(f"  2. Check your setup:    {BOLD}gaas doctor{NC}")
+    else:
+        _info("  2. Check your setup:    gaas doctor")
+    if _color():
+        _info(f"  3. Start GaaS:          {BOLD}gaas start{NC}")
+    else:
+        _info("  3. Start GaaS:          gaas start")
+    ref_path = PROJECT_ROOT / 'example.config.yaml'
+    if _color():
+        _info(f"  Full config reference:  {BOLD}{ref_path}{NC}")
+    else:
+        _info(f"  Full config reference:  {ref_path}")
     print()
 
     return 0

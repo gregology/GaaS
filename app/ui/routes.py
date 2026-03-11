@@ -338,5 +338,5 @@ async def save_raw(request: Request):
     except ConfigValidationError as exc:
         return _render_error(str(exc))
 
-    success_content = f'<div class="alert alert-success mb-4"><span>Config saved.</span></div>'
+    success_content = '<div class="alert alert-success mb-4"><span>Config saved.</span></div>'
     return HTMLResponse(success_content + _render_oob_banner())

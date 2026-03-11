@@ -23,10 +23,7 @@ def _load_handler(module_name: str, handler_path: str) -> TaskHandler | None:
     If handler_path starts with '.', it is relative to module_name.
     Expected format: ".platforms.issues.check.handle" or "module.func"
     """
-    if handler_path.startswith("."):
-        parts = handler_path[1:].split(".")
-    else:
-        parts = handler_path.split(".")
+    parts = handler_path[1:].split(".") if handler_path.startswith(".") else handler_path.split(".")
 
     func_name = parts.pop()
     sub_module = ".".join(parts)

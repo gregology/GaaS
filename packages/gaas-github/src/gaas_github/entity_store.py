@@ -89,5 +89,8 @@ class GitHubEntityStore:
         self._path.mkdir(parents=True, exist_ok=True)
         dest = self._path / self._filename(org, repo, number)
         synced_path.rename(dest)
-        log.info("Restored %s %s/%s#%d from synced/ to active", self._entity_type, org, repo, number)
+        log.info(
+            "Restored %s %s/%s#%d from synced/ to active",
+            self._entity_type, org, repo, number,
+        )
         return dest

@@ -36,7 +36,10 @@ def handle(task: TaskRecord):
     stale = active_local - active_remote
     for org, repo, number in stale:
         store.move_to_synced(org, repo, number)
-        log.info("PR **%s/%s#%d** no longer requires attention — moved to synced/", org, repo, number)
+        log.info(
+            "PR **%s/%s#%d** no longer requires attention"
+            " — moved to synced/", org, repo, number,
+        )
 
     # Enqueue collect for every active PR (upsert: creates new or refreshes metadata).
     for pr in remote_prs:
@@ -49,6 +52,9 @@ def handle(task: TaskRecord):
         }, priority=3)
 
     log.info(
-        "github.pull_requests.check: %d active remotely, %d tracked locally, %d moved to synced/, %d collect tasks queued",
-        len(active_remote), len(active_local), len(stale), len(remote_prs),
+        "github.pull_requests.check: %d active remotely, "
+        "%d tracked locally, %d moved to synced/, "
+        "%d collect tasks queued",
+        len(active_remote), len(active_local),
+        len(stale), len(remote_prs),
     )

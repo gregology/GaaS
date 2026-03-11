@@ -51,7 +51,10 @@ def handle(task: TaskRecord):
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.issues.classify: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
+    log.info(
+        "github.issues.classify: %s/%s#%d (integration=%s)",
+        org, repo, number, integration_id,
+    )
 
     classifications = platform.classifications or DEFAULT_CLASSIFICATIONS
     llm_config = runtime.get_llm_config(integration.llm)
@@ -86,14 +89,21 @@ def handle(task: TaskRecord):
         schema = build_schema(classifications)
         classification = conversation.message(prompt=prompt, schema=schema)
 
-        log.info("github.issues.classify: %s/%s#%d result=%s", org, repo, number, classification)
+        log.info(
+            "github.issues.classify: %s/%s#%d result=%s",
+            org, repo, number, classification,
+        )
 
         classified_by = {
             "model": llm_config.model,
             "profile": integration.llm,
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        store.update(org, repo, number, classification=classification, classified_by=classified_by)
+        store.update(
+            org, repo, number,
+            classification=classification,
+            classified_by=classified_by,
+        )
         log.info("Classified issue **%s/%s#%d**", org, repo, number)
 
     runtime.enqueue({

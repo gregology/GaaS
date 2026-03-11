@@ -83,7 +83,9 @@ def handle(task: TaskRecord):
 
             _execute_action(email, action)
             if store:
-                if isinstance(action, str) and action in _FOLDER_MOVES:
-                    store.move_to_subdir(message_id, "synced")
-                elif isinstance(action, dict) and "move_to" in action:
+                is_folder_move = (
+                    (isinstance(action, str) and action in _FOLDER_MOVES)
+                    or (isinstance(action, dict) and "move_to" in action)
+                )
+                if is_folder_move:
                     store.move_to_subdir(message_id, "synced")

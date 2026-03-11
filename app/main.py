@@ -54,8 +54,10 @@ def _run_integration(integration_id: str, platform: str | None = None):
     """Shared logic for running integration platforms by composite ID."""
     try:
         integration = config.get_integration(integration_id)
-    except ValueError:
-        raise HTTPException(status_code=404, detail=f"Integration {integration_id!r} not found")
+    except ValueError as err:
+        raise HTTPException(
+            status_code=404, detail=f"Integration {integration_id!r} not found",
+        ) from err
 
     platforms_obj = getattr(integration, "platforms", None)
     if platforms_obj is None:

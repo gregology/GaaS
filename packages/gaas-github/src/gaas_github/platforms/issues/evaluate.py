@@ -68,7 +68,10 @@ def handle(task: TaskRecord):
     org = task["payload"]["org"]
     repo = task["payload"]["repo"]
     number = task["payload"]["number"]
-    log.info("github.issues.evaluate: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
+    log.info(
+        "github.issues.evaluate: %s/%s#%d (integration=%s)",
+        org, repo, number, integration_id,
+    )
 
     store = IssueStore(
         path=runtime.get_notes_dir() / "github" / "issues" / integration.name
@@ -87,10 +90,16 @@ def handle(task: TaskRecord):
 
     classifications = platform.classifications or DEFAULT_CLASSIFICATIONS
     resolve_value = _make_resolver(snapshot)
-    actions = evaluate_automations(platform.automations, resolve_value, classification, classifications)
+    actions = evaluate_automations(
+        platform.automations, resolve_value,
+        classification, classifications,
+    )
 
     if not actions:
-        log.info("github.issues.evaluate: no automations matched for %s/%s#%d", org, repo, number)
+        log.info(
+            "github.issues.evaluate: no automations matched "
+            "for %s/%s#%d", org, repo, number,
+        )
         return
 
     provenance = resolve_action_provenance(

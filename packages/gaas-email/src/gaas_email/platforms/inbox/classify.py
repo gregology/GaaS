@@ -82,7 +82,11 @@ def handle(task: TaskRecord):
             "profile": integration.llm,
             "timestamp": datetime.now(UTC).isoformat(),
         }
-        store.update(message_id, classification=classification, classified_by=classified_by)
+        store.update(
+            message_id,
+            classification=classification,
+            classified_by=classified_by,
+        )
 
     runtime.enqueue({
         "type": "email.inbox.evaluate",

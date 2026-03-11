@@ -304,7 +304,10 @@ def _find_unsafe_actions(
             if name in irreversible_actions:
                 unsafe.append(name)
         else:
-            log.warning("Unrecognized action type %s treated as irreversible", type(action).__name__)
+            log.warning(
+                "Unrecognized action type %s treated as irreversible",
+                type(action).__name__,
+            )
             unsafe.append(f"unknown:{type(action).__name__}")
     return unsafe
 

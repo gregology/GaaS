@@ -92,7 +92,7 @@ class GitHubClient:
             "title": result.get("title", ""),
             "author": result.get("user", {}).get("login", ""),
             "state": result.get("state", "unknown"),
-            "labels": [l.get("name", "") for l in result.get("labels", [])],
+            "labels": [lbl.get("name", "") for lbl in result.get("labels", [])],
         }
 
     def get_issue_detail(self, org: str, repo: str, number: int) -> dict:
@@ -102,7 +102,7 @@ class GitHubClient:
             "body": result.get("body", "") or "",
             "author": result.get("user", {}).get("login", ""),
             "state": result.get("state", "unknown"),
-            "labels": [l.get("name", "") for l in result.get("labels", [])],
+            "labels": [lbl.get("name", "") for lbl in result.get("labels", [])],
             "comment_count": result.get("comments", 0),
         }
 
@@ -163,7 +163,10 @@ class GitHubClient:
                 continue
             parsed = _parse_search_item(item)
             if not parsed:
-                log.warning("Cannot parse org/repo from repository_url: %s", item.get("repository_url", ""))
+                log.warning(
+                    "Cannot parse org/repo from repository_url: %s",
+                    item.get("repository_url", ""),
+                )
                 continue
             entities.append(parsed)
         log.info("_search_raw(%r): found %d results", query, len(entities))

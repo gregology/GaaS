@@ -62,12 +62,11 @@ def policy_enqueue(
     policy = resolve_policy(task_type)
 
     # Dedup check
-    if policy.deduplicate_pending:
-        if queue.has_pending_duplicate(fp, task_type):
-            log.info(
-                "Dedup: skipping %s (fingerprint %s already pending)", task_type, fp,
-            )
-            return None
+    if policy.deduplicate_pending and queue.has_pending_duplicate(fp, task_type):
+        log.info(
+            "Dedup: skipping %s (fingerprint %s already pending)", task_type, fp,
+        )
+        return None
 
     # Rate limit check
     if policy.rate_limit is not None:

@@ -4,6 +4,8 @@ GaaS currently requires users to hand-edit `config.yaml`. That works for develop
 
 The goal is to add a web UI that lives alongside the YAML config, not above it. The YAML file stays as the source of truth. The UI reads it, displays it, and can write back to it while preserving comments and formatting.
 
+> **Status:** This document began as a pre-implementation architecture decision record. Phases 1 and 2 have been implemented. The research sections below remain as historical context for the decisions made. See `docs/development.md` for the current user-facing description of the UI.
+
 ## Research
 
 We looked at how five projects handle the "config file vs UI" problem, evaluated three frontend architecture approaches, and tested two YAML round-tripping libraries.
@@ -65,9 +67,9 @@ A full SPA produces the best UX for nested forms but the worst maintenance profi
 
 Start read-only. Add editing incrementally. Each phase is independently useful.
 
-### Phase 1: Config viewer (HTMX + Jinja2 + DaisyUI)
+### Phase 1: Config viewer (HTMX + Jinja2 + DaisyUI) — ✅ Implemented
 
-Render the full config as collapsible HTML. No YAML writing. No `ruamel.yaml` dependency yet.
+The config viewer renders the full config as collapsible HTML.
 
 What it shows:
 - Full config with collapsible sections per integration and platform
@@ -78,30 +80,32 @@ What it shows:
 - Task queue status (pending/active/done/failed counts, inspect payloads)
 - Audit log browser (daily markdown logs)
 
-Why start here: a viewer carries zero risk of mangling user files. It validates the template structure and component choices. It is immediately useful for anyone debugging their config. And it forces us to build the schema-to-HTML rendering that editing will need.
+Why we started here: a viewer carried zero risk of mangling user files. It validated the template structure and component choices. It was immediately useful for anyone debugging their config. And it forced us to build the schema-to-HTML rendering that editing needed.
 
 DaisyUI provides collapse/accordion for nested sections, tabs for switching between integrations, badges for provenance. It loads via CDN on top of Tailwind. No build step.
 
-### Phase 2: Simple editing (add Alpine.js)
+### Phase 2: Simple editing (Alpine.js + ruamel.yaml) — ✅ Implemented
 
-Add editing for flat config sections where the form complexity is low:
+Editing for flat config sections where form complexity is low:
 - LLM profiles (key-value forms)
 - Directory paths (text inputs)
 - Integration-level config (schedule, LLM profile selection)
 - Script definitions (name, description, inputs, shell code via textarea)
 
-Add `ruamel.yaml` dependency here. Implement round-trip save that preserves comments and formatting. Add an inline YAML editor (raw textarea showing the relevant YAML section) as an escape hatch for power users who'd rather type YAML.
+Round-trip save preserves comments and formatting via `ruamel.yaml`. An inline YAML editor (raw textarea showing the relevant YAML section) serves as an escape hatch for power users who'd rather type YAML directly. The config editor includes locking, backup, and validation (`app/ui/yaml_rw.py`).
 
 `!secret` values are displayed as masked placeholders. Never resolved in the UI.
 
-### Phase 3: Complex editing + onboarding (Alpine.js components)
+After saving, a "Restart Required" banner appears via HTMX Out-of-Band (OOB) swaps. The supervisor detects a restart sentinel file and restarts both processes automatically.
+
+### What's next: Complex editing + onboarding (Phase 3)
 
 - Classification editor: add/edit/remove with type selector (confidence/boolean/enum)
 - Automation rule builder: when/then pairs with operator selection, provenance preview
 - Integration setup wizard: step-by-step config creation, like HA's Config Flow
 - Dry-run mode: preview what an automation rule would match against recent items
 
-The onboarding wizard naturally emerges from the editing components. A "new integration" flow reuses the same forms. This is also where enabling the UI during install makes sense. The install procedure could optionally run the Phase 3 wizard to generate the initial `config.yaml`.
+The onboarding wizard naturally emerges from the editing components. A "new integration" flow reuses the same forms. This is also where enabling the UI during install makes sense. The install procedure could optionally run this wizard to generate the initial `config.yaml`.
 
 ### UI Features
 
@@ -121,32 +125,35 @@ Why: clear visual signaling prevents users from mistaking an experimental tool f
 
 The UI talks to FastAPI endpoints that read/write config. The endpoints are the validation boundary. Direct file editing by the UI is not allowed. This aligns with HA's position that the API boundary is the right abstraction layer.
 
-Proposed endpoints (will evolve):
+Implemented endpoints:
 
 ```
-GET  /ui/                           # Main UI page
-GET  /ui/config                     # Full config viewer
+GET  /ui/                           # Dashboard with integration cards
+GET  /ui/config                     # Full config viewer/editor
 GET  /ui/config/integrations/{id}   # Single integration detail
-GET  /ui/queue                      # Task queue viewer
+GET  /ui/queue                      # Task queue browser
 GET  /ui/logs                       # Audit log browser
 GET  /ui/logs/{date}                # Single day's log
 
-# Phase 2+
 POST /ui/config/llms/{name}         # Create/update LLM profile
 DELETE /ui/config/llms/{name}       # Delete LLM profile
-POST /ui/config/integrations/{id}   # Update integration config
+POST /ui/config/directories         # Update directory settings
+POST /ui/config/integrations/{id}   # Update integration settings
 POST /ui/config/scripts/{name}      # Create/update script
+DELETE /ui/config/scripts/{name}    # Delete script
+POST /ui/config/raw                 # Raw YAML editor save
 ```
 
 All mutating endpoints validate via Pydantic, write via `ruamel.yaml`, and return the updated HTML partial (for HTMX swap) rather than JSON.
 
-### What this means for new dependencies
+### Dependencies
 
-Phase 1 adds nothing. Jinja2 is already a dependency. DaisyUI and HTMX are loaded from CDN (or vendored as static files).
+No phase required Node.js, npm, or a JavaScript build step.
 
-Phase 2 adds `ruamel.yaml` and Alpine.js (CDN/vendored).
-
-No phase requires Node.js, npm, or a JavaScript build step.
+- **ruamel.yaml** is a core dependency in `pyproject.toml` (used by the config editor for round-trip YAML preservation)
+- **Alpine.js** loads from CDN (~14KB, no build step)
+- **HTMX** and **DaisyUI/Tailwind** load from CDN
+- **Jinja2** was already a dependency (FastAPI templating)
 
 ## Alternatives we considered but rejected
 
@@ -162,9 +169,11 @@ The strongest form-editing experience. RJSF handles nested JSON Schema forms wit
 
 Works for flat config. Gets painful for deeply nested forms because every add/remove/conditional-show requires a server round-trip and a dedicated partial template. Estimate: 15-20 Jinja2 partials and corresponding endpoints just for the automation rule editor. Adding Alpine for client-side form state in complex sections is a better tradeoff.
 
-## Open questions
+## Resolved decisions
 
-- Should the UI be an optional dependency group (`uv sync --group ui`) or always available?
-- Should Phase 1 ship with the task queue viewer, or is that a separate effort?
-- How much of the onboarding wizard (Phase 3) should be CLI-based vs UI-based?
-- Should the inline YAML editor use a syntax highlighting library (CodeMirror, Monaco) or a plain textarea?
+These were open questions during planning, now answered by the implementation:
+
+- **UI is always available**, not an optional dependency group. `ruamel.yaml` is a core dependency.
+- **Task queue viewer shipped in Phase 1** at `/ui/queue`.
+- **Inline YAML editor uses a plain textarea** (the raw YAML escape hatch at `/ui/config/raw`). No syntax highlighting library needed for the current scope.
+- **Onboarding wizard** remains future work (Phase 3). CLI-based setup via `gaas setup` covers the initial config generation for now.

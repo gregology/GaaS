@@ -758,13 +758,13 @@ The UI reads config from `config.yaml` and writes back to it. The YAML file is t
 
 This was a deliberate rejection of Home Assistant's approach where Config Flow replaced YAML for most integrations. HA's ADR-0010 caused significant community friction: power users lost version control, bulk editing, and diffing. We looked at Grafana's model instead, where file-provisioned content is displayed in the UI without being "owned" by it.
 
-The tradeoff: we need to solve YAML round-tripping (preserving comments and formatting when the UI writes back). `ruamel.yaml` handles this. PyYAML (current dependency) strips comments. The round-trip problem doesn't exist in Phase 1 (read-only viewer) which is another reason to ship that first.
+The tradeoff: we needed to solve YAML round-tripping (preserving comments and formatting when the UI writes back). `ruamel.yaml` handles this and is now a core dependency. PyYAML strips comments and wasn't viable. The round-trip implementation lives in `app/ui/yaml_rw.py` with locking, backup, and validation.
 
 ### Phased delivery: read-only first, editing later
 
-Phase 1 is a config viewer. Phase 2 adds editing for flat sections. Phase 3 adds complex editing and onboarding.
+Phase 1 was a config viewer. Phase 2 added editing for flat sections. Both are now implemented. Phase 3 (complex editing and onboarding) remains future work.
 
-Starting read-only follows Grafana's pattern and matches GaaS's trust principles. A viewer carries zero risk of mangling user files. It validates the template structure before any file mutation code exists. Each phase is independently shippable and useful.
+Starting read-only followed Grafana's pattern and matched GaaS's trust principles. A viewer carried zero risk of mangling user files. It validated the template structure before any file mutation code existed. Each phase was independently shippable and useful.
 
 The alternative was building editing from the start. We rejected that because it front-loads the hardest problems (YAML round-tripping, complex nested form state, validation) before the basic UI framework is proven.
 

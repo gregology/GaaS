@@ -20,7 +20,7 @@ POLL_INTERVAL = 1  # seconds
 _shutting_down = False
 
 
-def _shutdown_handler(signum: int, frame: FrameType | None) -> None:
+def _shutdown_handler(signum: int, _frame: FrameType | None) -> None:
     global _shutting_down
     _shutting_down = True
     log.info("Received signal %s, shutting down gracefully…", signum)
