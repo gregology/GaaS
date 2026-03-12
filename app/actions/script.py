@@ -111,10 +111,13 @@ def execute(script_def: Any, inputs: dict[str, str]) -> str | None:
     Returns the captured output string, or None if no output was captured.
     Raises subprocess.TimeoutExpired if the script exceeds its timeout.
     """
-    log_file = _make_temp_file("gaas_log_")
-    output_file = _make_temp_file("gaas_out_")
-    script_file = _make_temp_file("gaas_script_", suffix=".sh")
+    log_file: Path | None = None
+    output_file: Path | None = None
+    script_file: Path | None = None
     try:
+        log_file = _make_temp_file("gaas_log_")
+        output_file = _make_temp_file("gaas_out_")
+        script_file = _make_temp_file("gaas_script_", suffix=".sh")
         env = _build_env(inputs, log_file, output_file)
         script_file.write_text(_build_script_body(script_def))
 
@@ -137,7 +140,8 @@ def execute(script_def: Any, inputs: dict[str, str]) -> str | None:
         return _read_captured_output(script_def, output_file)
 
     except subprocess.TimeoutExpired:
-        _process_log_file(log_file, _script_label(script_def))
+        if log_file is not None:
+            _process_log_file(log_file, _script_label(script_def))
         raise
     finally:
         _cleanup_temp_files(log_file, script_file, output_file)

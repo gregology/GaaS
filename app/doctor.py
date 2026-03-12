@@ -131,15 +131,13 @@ def check_gh() -> tuple[bool, bool]:
 def _load_config_yaml() -> dict[str, Any] | None:
     """Load and parse config.yaml with permissive tag handling.
 
-    Returns the parsed dict, or None if the file doesn't exist or can't be parsed.
-    Emits pass/fail/warn messages as side effects.
+    Returns the parsed dict, or None if the file is empty.
+    Raises yaml.YAMLError on parse failure, OSError on read failure.
+    Caller is responsible for checking file existence and user-facing messaging.
     """
     import yaml
 
     config_path = PROJECT_ROOT / "config.yaml"
-    if not config_path.exists():
-        _fail("config.yaml not found — run: gaas setup")
-        return None
 
     class _PermissiveLoader(yaml.SafeLoader):
         pass
@@ -178,8 +176,13 @@ def check_config() -> bool:
 
     _pass(f"config.yaml exists ({config_path})")
 
+    import yaml
+
     try:
         raw = _load_config_yaml()
+    except yaml.YAMLError as e:
+        _fail(f"config.yaml parse error: {e}")
+        return False
     except Exception as e:
         _fail(f"Could not read config.yaml: {e}")
         return False
