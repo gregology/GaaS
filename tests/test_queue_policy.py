@@ -6,34 +6,34 @@ import pytest
 
 from app import queue
 from app.config import QueuePolicyConfig, RateLimitConfig, TaskPolicyConfig
-from app.queue_policy import _parse_duration_seconds, policy_enqueue, resolve_policy
+from app.queue_policy import parse_duration_seconds, policy_enqueue, resolve_policy
 
 
 # ---------------------------------------------------------------------------
-# _parse_duration_seconds
+# parse_duration_seconds
 # ---------------------------------------------------------------------------
 
 
 class TestParseDurationSeconds:
     def test_minutes(self):
-        assert _parse_duration_seconds("30m") == 1800
+        assert parse_duration_seconds("30m") == 1800
 
     def test_hours(self):
-        assert _parse_duration_seconds("1h") == 3600
+        assert parse_duration_seconds("1h") == 3600
 
     def test_days(self):
-        assert _parse_duration_seconds("1d") == 86400
+        assert parse_duration_seconds("1d") == 86400
 
     def test_whitespace(self):
-        assert _parse_duration_seconds("  2h  ") == 7200
+        assert parse_duration_seconds("  2h  ") == 7200
 
     def test_invalid_raises(self):
         with pytest.raises(ValueError, match="Invalid duration"):
-            _parse_duration_seconds("abc")
+            parse_duration_seconds("abc")
 
     def test_no_unit_raises(self):
         with pytest.raises(ValueError, match="Invalid duration"):
-            _parse_duration_seconds("30")
+            parse_duration_seconds("30")
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +146,27 @@ class TestCountRecent:
 
         assert queue.count_recent("email.inbox.check", 3600) == 1
         assert queue.count_recent("github.pull_requests.classify", 3600) == 1
+
+    def test_excludes_old_files(self, queue_dir):
+        """Files with timestamps outside the window are not counted (early-stop)."""
+        import yaml
+
+        # Plant an old file directly in done/
+        name = "5_20200101T000000Z_aaaaaaaa--bbbbbbbb--email.inbox.check.yaml"
+        old_file = queue_dir / "done" / name
+        old_file.write_text(yaml.dump({"status": "done"}))
+
+        # Enqueue a recent one
+        queue.enqueue({"type": "email.inbox.check"})
+
+        assert queue.count_recent("email.inbox.check", 3600) == 1
+
+    def test_counts_across_priorities(self, queue_dir):
+        """Tasks with different priorities but recent timestamps are all counted."""
+        queue.enqueue({"type": "test"}, priority=1)
+        queue.enqueue({"type": "test"}, priority=9)
+
+        assert queue.count_recent("test", 3600) == 2
 
 
 # ---------------------------------------------------------------------------

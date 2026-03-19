@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal, Union
 
 import yaml
 
-from pydantic import BaseModel, Field, create_model, model_validator
+from pydantic import BaseModel, Field, create_model, field_validator, model_validator
 
 # Re-export models from assistant_sdk so existing imports work unchanged
 from assistant_sdk.models import (  # noqa: F401
@@ -126,6 +126,18 @@ class TaskPolicyConfig(BaseModel):
 class QueuePolicyConfig(BaseModel):
     defaults: TaskPolicyConfig = TaskPolicyConfig()
     overrides: dict[str, TaskPolicyConfig] = {}
+    retention: str = "7d"
+
+    @field_validator("retention")
+    @classmethod
+    def _validate_retention(cls, v: str) -> str:
+        import re
+
+        if not re.fullmatch(r"(\d+)\s*([mhd])", v.strip().lower()):
+            raise ValueError(
+                f"Invalid retention format: {v!r} (expected e.g. '30m', '1h', '7d')"
+            )
+        return v
 
 
 # ---------------------------------------------------------------------------

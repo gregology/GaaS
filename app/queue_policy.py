@@ -17,7 +17,7 @@ from app.config import config, TaskPolicyConfig
 log = logging.getLogger(__name__)
 
 
-def _parse_duration_seconds(duration: str) -> int:
+def parse_duration_seconds(duration: str) -> int:
     """Convert a duration string like '30m', '1h', '1d' to seconds."""
     match = re.fullmatch(r"(\d+)\s*([mhd])", duration.strip().lower())
     if not match:
@@ -71,7 +71,7 @@ def policy_enqueue(
 
     # Rate limit check
     if policy.rate_limit is not None:
-        seconds = _parse_duration_seconds(policy.rate_limit.per)
+        seconds = parse_duration_seconds(policy.rate_limit.per)
         recent = queue.count_recent(task_type, seconds)
         if recent >= policy.rate_limit.max:
             log.info(
