@@ -839,3 +839,9 @@ Why: the UI allows multiple concurrent POST requests (e.g. updating an LLM profi
 The web process calls `reload_config()` immediately after any successful configuration write.
 
 Why: Assistant uses a module-level `config` singleton loaded at startup. While the UI writes to `config.yaml` on disk, the running web server's memory remains stale. Explicitly reloading the singleton ensures that the Dashboard, navigation, and subsequent config views reflect the changes (like updated log paths or integration names) without requiring a full process restart. Note that the worker and scheduler processes still require a full restart to pick up changes, as they are separate processes.
+
+### Broad exception catch around `reload_config()` in POST handlers
+
+The `yaml_rw` layer wraps all write-time errors in `ConfigValidationError`, and `validate_proposed()` pre-flights the full `load_config()` pipeline on a temp copy before writing. But `reload_config()` runs the real `load_config()` after the file is already on disk — and that can raise `pydantic.ValidationError`, `ImportError` (integration discovery), or other exceptions not wrapped in `ConfigValidationError`. The window is narrow (validate_proposed exercises the same path) but non-zero for non-deterministic failures like module side effects.
+
+Each POST handler catches `Exception` from `reload_config()`, logs the traceback, and returns a user-friendly 422 explaining that the file was saved but the reload failed. This prevents raw 500s and tells the user to restart the server. The broad catch is deliberate: the alternative is enumerating every exception `load_config()` could raise, which would drift as integrations are added.

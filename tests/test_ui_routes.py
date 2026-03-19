@@ -401,6 +401,78 @@ class TestPostReturnsPartial:
         )
 
 
+class TestReloadConfigFailure:
+    """POST handlers must catch non-ConfigValidationError from reload_config()."""
+
+    def test_update_llm_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.update_llm_profile"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ValueError("boom")):
+            response = client.post(
+                "/ui/config/llms/default",
+                data={"model": "test-model", "base_url": "http://localhost:11434"},
+            )
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+        assert "boom" in response.text
+
+    def test_remove_llm_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.delete_llm_profile"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ImportError("missing")):
+            response = client.delete("/ui/config/llms/fast")
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+    def test_update_dirs_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.update_directories"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=RuntimeError("oops")):
+            response = client.post(
+                "/ui/config/directories",
+                data={
+                    "notes": "", "task_queue": "data/queue",
+                    "logs": "logs", "custom_integrations": "",
+                },
+            )
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+    def test_update_script_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.update_script"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ValueError("bad")):
+            response = client.post(
+                "/ui/config/scripts/greet",
+                data={"shell": "echo hello", "timeout": "30"},
+            )
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+    def test_remove_script_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.delete_script"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ValueError("bad")):
+            response = client.delete("/ui/config/scripts/greet")
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+    def test_save_raw_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.save_raw_yaml"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ValueError("bad")):
+            response = client.post(
+                "/ui/config/yaml",
+                data={"yaml_content": "llms:\n  default:\n    model: test\n"},
+            )
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+    def test_update_integration_reload_failure(self):
+        with patch(f"{_MOCK_BASE}.update_integration_settings"), \
+             patch(f"{_MOCK_BASE}.reload_config", side_effect=ValueError("bad")):
+            response = client.post(
+                "/ui/config/integrations/0/settings",
+                data={"schedule_type": "none", "schedule_value": ""},
+            )
+        assert response.status_code == 422
+        assert "saved to disk but reload failed" in response.text
+
+
 class TestPresenterViewModels:
     """IntegrationView must carry raw schedule fields for forms."""
 
