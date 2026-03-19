@@ -55,6 +55,13 @@ def _render_error(error_msg: str) -> HTMLResponse:
     return HTMLResponse(template.render(error=error_msg), status_code=422)
 
 
+def _reload_failed_error(exc: Exception) -> HTMLResponse:
+    return _render_error(
+        f"Config saved to disk but reload failed: {exc}. "
+        "Restart the server to pick up changes."
+    )
+
+
 def _render_oob_banner() -> str:
     template = _env.get_template("partials/_config_banner.html")
     return template.render(config_dirty=is_dirty(), supervisor_active=_supervisor_active())
@@ -185,6 +192,20 @@ async def restart():
 # ---------------------------------------------------------------------------
 
 
+def _build_llm_updates(form: ImmutableMultiDict[str, Any]) -> dict[str, Any]:
+    """Extract LLM profile fields from form data."""
+    updates: dict[str, Any] = {}
+    if form.get("base_url"):
+        updates["base_url"] = form["base_url"]
+    if form.get("model"):
+        updates["model"] = form["model"]
+    if form.get("parameters"):
+        updates["parameters"] = _parse_parameters(str(form["parameters"]))
+    elif "parameters" in form:
+        updates["parameters"] = {}
+    return updates
+
+
 @router.post("/config/llms/{name}", response_class=HTMLResponse)
 async def update_llm(name: str, request: Request) -> HTMLResponse:
     form = await request.form()
@@ -195,16 +216,7 @@ async def update_llm(name: str, request: Request) -> HTMLResponse:
             if not profile_name:
                 return _render_error("Profile name is required")
 
-        updates: dict[str, Any] = {}
-        if form.get("base_url"):
-            updates["base_url"] = form["base_url"]
-        if form.get("model"):
-            updates["model"] = form["model"]
-        if form.get("parameters"):
-            updates["parameters"] = _parse_parameters(str(form["parameters"]))
-        elif "parameters" in form:
-            updates["parameters"] = {}
-
+        updates = _build_llm_updates(form)
         if not updates.get("model"):
             return _render_error("Model is required")
 
@@ -212,6 +224,9 @@ async def update_llm(name: str, request: Request) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after saving LLM profile")
+        return _reload_failed_error(exc)
 
     return _render_llm_section()
 
@@ -223,6 +238,9 @@ async def remove_llm(name: str) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after deleting LLM profile")
+        return _reload_failed_error(exc)
 
     return _render_llm_section()
 
@@ -245,6 +263,9 @@ async def update_dirs(request: Request) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after saving directories")
+        return _reload_failed_error(exc)
 
     return _render_directories_section()
 
@@ -265,6 +286,9 @@ async def update_integration(index: int, request: Request) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after saving integration settings")
+        return _reload_failed_error(exc)
 
     return _render_integration_header(index)
 
@@ -303,6 +327,9 @@ async def update_script_endpoint(name: str, request: Request) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after saving script")
+        return _reload_failed_error(exc)
 
     return _render_scripts_section()
 
@@ -314,6 +341,9 @@ async def remove_script(name: str) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after deleting script")
+        return _reload_failed_error(exc)
 
     return _render_scripts_section()
 
@@ -339,6 +369,9 @@ async def save_raw(request: Request) -> HTMLResponse:
         reload_config()
     except ConfigValidationError as exc:
         return _render_error(str(exc))
+    except Exception as exc:
+        log.exception("reload_config failed after saving raw YAML")
+        return _reload_failed_error(exc)
 
     success_content = '<div class="alert alert-success mb-4"><span>Config saved.</span></div>'
     return HTMLResponse(success_content + _render_oob_banner())
