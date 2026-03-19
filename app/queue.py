@@ -277,9 +277,11 @@ def prune_completed(retention_seconds: int) -> int:
             except ValueError:
                 continue
             if ts.timestamp() < cutoff:
-                with contextlib.suppress(FileNotFoundError):
+                try:
                     f.unlink()
-                pruned += 1
+                    pruned += 1
+                except FileNotFoundError:
+                    pass
 
     if pruned:
         log.info("Pruned %d completed task file(s) past retention", pruned)

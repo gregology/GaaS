@@ -6,34 +6,34 @@ import pytest
 
 from app import queue
 from app.config import QueuePolicyConfig, RateLimitConfig, TaskPolicyConfig
-from app.queue_policy import _parse_duration_seconds, policy_enqueue, resolve_policy
+from app.queue_policy import parse_duration_seconds, policy_enqueue, resolve_policy
 
 
 # ---------------------------------------------------------------------------
-# _parse_duration_seconds
+# parse_duration_seconds
 # ---------------------------------------------------------------------------
 
 
 class TestParseDurationSeconds:
     def test_minutes(self):
-        assert _parse_duration_seconds("30m") == 1800
+        assert parse_duration_seconds("30m") == 1800
 
     def test_hours(self):
-        assert _parse_duration_seconds("1h") == 3600
+        assert parse_duration_seconds("1h") == 3600
 
     def test_days(self):
-        assert _parse_duration_seconds("1d") == 86400
+        assert parse_duration_seconds("1d") == 86400
 
     def test_whitespace(self):
-        assert _parse_duration_seconds("  2h  ") == 7200
+        assert parse_duration_seconds("  2h  ") == 7200
 
     def test_invalid_raises(self):
         with pytest.raises(ValueError, match="Invalid duration"):
-            _parse_duration_seconds("abc")
+            parse_duration_seconds("abc")
 
     def test_no_unit_raises(self):
         with pytest.raises(ValueError, match="Invalid duration"):
-            _parse_duration_seconds("30")
+            parse_duration_seconds("30")
 
 
 # ---------------------------------------------------------------------------

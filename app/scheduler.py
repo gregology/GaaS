@@ -10,7 +10,7 @@ from fastapi_crons import Crons
 
 from app import queue
 from app.config import config
-from app.queue_policy import _parse_duration_seconds, policy_enqueue
+from app.queue_policy import parse_duration_seconds, policy_enqueue
 from app.integrations import ENTRY_TASKS
 
 log = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ def init_schedules(app: FastAPI) -> Crons:
         _register_platform_schedules(crons, integration, expr)
 
     # Daily pruning of completed/failed tasks past retention
-    retention_seconds = _parse_duration_seconds(config.queue_policies.retention)
+    retention_seconds = parse_duration_seconds(config.queue_policies.retention)
     crons.cron("0 0 * * *", name="queue_prune")(
         _make_prune_job(retention_seconds)
     )

@@ -129,3 +129,9 @@ class TestQueuePolicyConfig:
     def test_retention_custom(self):
         policy = QueuePolicyConfig(retention="30d")
         assert policy.retention == "30d"
+
+    def test_retention_invalid_raises(self):
+        import pytest
+
+        with pytest.raises(Exception, match="Invalid retention format"):
+            QueuePolicyConfig(retention="7x")
