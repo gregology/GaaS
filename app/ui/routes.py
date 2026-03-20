@@ -138,6 +138,15 @@ async def dashboard():
     )
 
 
+@router.get("/chat", response_class=HTMLResponse)
+async def chat_page():
+    template = _env.get_template("chat.html")
+    return template.render(
+        config_dirty=is_dirty(),
+        supervisor_active=_supervisor_active(),
+    )
+
+
 @router.get("/config", response_class=HTMLResponse)
 async def config_page():
     template = _env.get_template("config.html")

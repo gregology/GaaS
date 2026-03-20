@@ -99,6 +99,11 @@ def load_platform_const(integration_type: str, platform_name: str) -> object | N
 # ---------------------------------------------------------------------------
 
 
+class ChatConfig(BaseModel):
+    llm: str = "default"
+    system_prompt: str | None = None
+
+
 class LLMConfig(BaseModel):
     base_url: str = "http://localhost:11434"
     model: str
@@ -561,6 +566,7 @@ def load_config(config_path: Path = _CONFIG_PATH) -> tuple[Any, list[str]]:
         directories: DirectoriesConfig = DirectoriesConfig()
         scripts: dict[str, ScriptConfig] = {}
         queue_policies: QueuePolicyConfig = QueuePolicyConfig()
+        chat: ChatConfig = ChatConfig()
 
         @model_validator(mode="after")
         def _check_unique_names(self) -> AppConfig:
@@ -603,6 +609,11 @@ def load_config(config_path: Path = _CONFIG_PATH) -> tuple[Any, list[str]]:
     warnings = _validate_automation_safety(cfg.integrations, scripts=cfg.scripts)
     warnings.extend(_validate_script_references(cfg.integrations, cfg.scripts))
     warnings.extend(_validate_service_references(cfg.integrations))
+    if cfg.chat.llm not in cfg.llms:
+        warnings.append(
+            f"Chat LLM profile '{cfg.chat.llm}' not found in llms. "
+            f"Available: {list(cfg.llms.keys())}"
+        )
     return cfg, warnings
 
 

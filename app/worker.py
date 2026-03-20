@@ -46,6 +46,9 @@ def main() -> None:
     register_all()
     HANDLERS["script.run"] = script_run_handle
 
+    from app.chat import chat_message_handler
+    HANDLERS["chat.message"] = chat_message_handler
+
     queue.init()
     queue.recover_stale_active()
     log.info("Worker started, polling every %ss", POLL_INTERVAL)
