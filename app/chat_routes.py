@@ -26,13 +26,13 @@ def _extract_conversation_id(
     result: dict[str, Any], payload: dict[str, Any],
 ) -> str:
     """Extract conversation_id from either the result or on_result config."""
-    cid = result.get("conversation_id", "")
+    cid: str = result.get("conversation_id", "")
     if cid:
         return cid
     for route in payload.get("on_result", []):
         if route.get("type") == "chat_reply":
-            return route.get("conversation_id", "")
-    return payload.get("conversation_id", "")
+            return str(route.get("conversation_id", ""))
+    return str(payload.get("conversation_id", ""))
 
 
 class MessageRequest(BaseModel):

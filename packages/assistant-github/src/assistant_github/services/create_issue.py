@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from assistant_sdk.task import TaskRecord
 
@@ -11,7 +12,7 @@ from assistant_github.client import GitHubClient
 log = logging.getLogger(__name__)
 
 
-def handle(task: TaskRecord) -> dict:
+def handle(task: TaskRecord) -> dict[str, Any]:
     """Handle a service.github.create_issue queue task.
 
     Payload fields:
