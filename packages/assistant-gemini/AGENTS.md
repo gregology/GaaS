@@ -73,3 +73,4 @@ All tests mock the Gemini API. No real API calls in the default test suite.
 
 - The `google-genai` SDK is the only external dependency beyond assistant-sdk.
 - New services go in `services/` with their own handler module and a corresponding entry in `manifest.yaml`.
+- This package is excluded from project-wide mypy. Run `uv run mypy packages/assistant-gemini/ --ignore-missing-imports` manually after changes.
