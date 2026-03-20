@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Assistant — Chat{% endblock %}
+{% block content %}
+
+<div x-data="chatApp()" x-init="init()" class="flex flex-col" style="height: calc(100vh - 220px);">
+
+  <!-- Error state -->
+  <template x-if="error">
+    <div class="alert alert-error mb-4">
+      <span x-text="error"></span>
+    </div>
+  </template>
+
+  <!-- Chat messages area -->
+  <div x-ref="chatArea" class="flex-1 overflow-y-auto space-y-2 pb-4">
+
+    <!-- Empty state -->
+    <template x-if="messages.length === 0 && !loading">
+      <div class="flex items-center justify-center h-full">
+        <p class="text-base-content/50 italic">Start a conversation</p>
+      </div>
+    </template>
+
+    <!-- Messages -->
+    <template x-for="(msg, index) in messages" :key="index">
+      <div>
+        <!-- User message -->
+        <template x-if="msg.role === 'user'">
+          <div class="chat chat-end">
+            <div class="chat-bubble chat-bubble-primary" x-text="msg.content"></div>
+          </div>
+        </template>
+
+        <!-- Assistant message -->
+        <template x-if="msg.role === 'assistant' && msg.type === 'chat'">
+          <div class="chat chat-start">
+            <div class="chat-bubble" x-text="msg.content"></div>
+          </div>
+        </template>
+
+        <!-- System/command message -->
+        <template x-if="msg.type === 'command' || msg.type === 'system'">
+          <template x-if="msg.role !== 'user'">
+            <div class="text-center py-1">
+              <span class="text-sm text-base-content/50 italic" x-text="msg.content"></span>
+            </div>
+          </template>
+        </template>
+      </div>
+    </template>
+
+    <!-- Loading indicator -->
+    <template x-if="loading">
+      <div class="chat chat-start">
+        <div class="chat-bubble">
+          <span class="loading loading-dots loading-sm"></span>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Input area -->
+  <div class="flex gap-2 pt-2 border-t border-base-300">
+    <input
+      type="text"
+      x-model="input"
+      @keydown.enter="sendMessage()"
+      :disabled="loading || !conversationId"
+      placeholder="Type a message..."
+      class="input input-bordered flex-1"
+    />
+    <button
+      @click="sendMessage()"
+      :disabled="loading || !input.trim() || !conversationId"
+      class="btn btn-primary"
+    >Send</button>
+  </div>
+</div>
+
+<script>
+function chatApp() {
+  return {
+    conversationId: null,
+    messages: [],
+    input: '',
+    loading: false,
+    error: null,
+    pollTimer: null,
+
+    async init() {
+      try {
+        const res = await fetch('/api/chat/conversations', { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to create conversation');
+        const data = await res.json();
+        this.conversationId = data.conversation_id;
+      } catch (e) {
+        this.error = 'Failed to initialize chat: ' + e.message;
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const area = this.$refs.chatArea;
+        if (area) area.scrollTop = area.scrollHeight;
+      });
+    },
+
+    async sendMessage() {
+      const content = this.input.trim();
+      if (!content || this.loading || !this.conversationId) return;
+
+      // Optimistic UI: show user message immediately
+      this.messages.push({
+        role: 'user',
+        content: content,
+        type: content.startsWith('/') ? 'command' : 'chat',
+        timestamp: new Date().toISOString()
+      });
+      this.input = '';
+      this.scrollToBottom();
+
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const res = await fetch(
+          `/api/chat/conversations/${this.conversationId}/messages`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+          }
+        );
+
+        if (!res.ok) throw new Error('Failed to send message');
+        const data = await res.json();
+
+        if (data.type === 'command') {
+          // Command response — show immediately
+          this.messages.push(data.message);
+          // Handle /clear: remove all messages except the system response
+          if (content.toLowerCase().startsWith('/clear')) {
+            this.messages = [data.message];
+          }
+          this.loading = false;
+          this.scrollToBottom();
+        } else if (data.type === 'chat') {
+          // Start polling for LLM response
+          this.pollForResult(data.task_id);
+        }
+      } catch (e) {
+        this.loading = false;
+        this.error = 'Failed to send message: ' + e.message;
+      }
+    },
+
+    pollForResult(taskId) {
+      this.pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/chat/tasks/${taskId}`);
+          if (!res.ok) {
+            if (res.status === 404) return; // Task not found yet, keep polling
+            throw new Error('Poll failed');
+          }
+          const data = await res.json();
+
+          if (data.status === 'done') {
+            clearInterval(this.pollTimer);
+            this.pollTimer = null;
+            this.messages.push(data.message);
+            this.loading = false;
+            this.scrollToBottom();
+          } else if (data.status === 'failed') {
+            clearInterval(this.pollTimer);
+            this.pollTimer = null;
+            this.messages.push(data.message);
+            this.loading = false;
+            this.scrollToBottom();
+          }
+          // status === 'pending' — keep polling
+        } catch (e) {
+          clearInterval(this.pollTimer);
+          this.pollTimer = null;
+          this.loading = false;
+          this.error = 'Failed to get response: ' + e.message;
+        }
+      }, 1000);
+    }
+  };
+}
+</script>
+
+{% endblock %}
