@@ -304,6 +304,39 @@ then:
 
 The rendered string shows up in the daily audit log at `logs/YYYY-MM-DD DayOfWeek.md`.
 
+## Making a service chat-proposable
+
+If you want the LLM to be able to propose your service during a chat conversation, add a `chat` block to the service definition in your manifest:
+
+```yaml
+services:
+  create_task:
+    name: "Create Task"
+    description: "Creates a task in Todoist"
+    handler: ".services.create_task.handle"
+    reversible: false
+    input_schema:
+      properties:
+        title: { type: string, description: "Task title" }
+        priority: { type: integer, description: "1-4, where 4 is urgent" }
+      required: [title]
+    chat:
+      description: "Create a Todoist task"
+      options:
+        - id: approve
+          label: "Create task"
+        - id: reject
+          label: "Cancel"
+```
+
+The `chat.description` tells the LLM what the action does. The `chat.options` define the buttons shown on the confirmation card. If you leave out `options`, defaults to Approve/Cancel.
+
+At startup, services with a `chat` block get registered in the chat action registry. The LLM's system prompt is built from these registrations so it knows what actions it can propose and what parameters they take (from `input_schema`).
+
+When the user approves a proposal, the system enqueues a normal `service.todoist.create_task` task through the queue. Your handler doesn't need to know whether it was triggered by an automation rule or by a chat proposal -- it receives the same task dict either way.
+
+The `!yolo` override is not needed for chat-proposed actions. The user clicking "Create task" is the explicit approval. The safety model already accounts for this: the LLM proposes, deterministic code gates, the human decides.
+
 ## Adding more services
 
 If your integration offers multiple services, add them to the manifest and create separate handler modules:

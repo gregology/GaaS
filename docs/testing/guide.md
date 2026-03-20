@@ -21,10 +21,11 @@ CI runs on GitHub Actions (`.github/workflows/test.yml`): checkout, setup uv, sy
 tests/
   conftest.py                           # Shared fixtures
   test_actions.py                       # Shared action partitioning, input resolution, template rendering
-  test_chat.py                          # ChatService conversation lifecycle and chat_message_handler
-  test_chat_routes.py                   # Chat API endpoint request/response tests
+  test_chat.py                          # ChatService, structured replies, proposals, action prompt builder
+  test_chat_routes.py                   # Chat API endpoints, poll idempotency, proposal responses
   test_cli.py                           # CLI parser routing, setup wizard, doctor subcommands
   test_config.py                        # YoloAction tag parsing, ScriptConfig, QueuePolicyConfig models
+  test_conversation_store.py            # JSONL conversation storage: CRUD, list, find_proposal
   test_llm.py                           # LLM conversation, schema validation, structured output retry
   test_loader.py                        # Integration discovery, manifest parsing, dynamic model construction
   test_queue.py                         # Queue lifecycle + stateful property tests
@@ -59,7 +60,8 @@ packages/assistant-gemini/tests/
   test_web_research.py                   # Service handler with/without output_schema
 
 packages/assistant-github/tests/
-  test_client.py                         # GitHub API client parsing, search dedup, PR status derivation
+  test_client.py                         # GitHub API client parsing, search dedup, PR status derivation, create_issue
+  test_create_issue.py                   # create_issue service handler: input validation, client dispatch
   test_entity_store.py                   # GitHubEntityStore: save, find, find_anywhere, move_to_synced
   test_evaluate.py                       # PR/Issue snapshot construction, resolver, automation evaluation
   test_issue_store.py                    # IssueStore save, field mappings, URL generation, defaults

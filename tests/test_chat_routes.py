@@ -2,13 +2,37 @@
 
 from unittest.mock import patch
 
+import pytest
 import yaml
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.chat import chat_service
+from app.conversation_store import ConversationStore
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_chat_store(tmp_path, monkeypatch):
+    """Replace the singleton's store and clear task cache."""
+    store = ConversationStore(tmp_path / "chats")
+    monkeypatch.setattr(chat_service, "_store", store)
+    chat_service._processed_tasks.clear()
+
+
+class TestListConversations:
+    def test_returns_empty_list(self):
+        resp = client.get("/api/chat/conversations")
+        assert resp.status_code == 200
+        assert resp.json() == {"conversations": []}
+
+    def test_returns_created_conversations(self):
+        client.post("/api/chat/conversations")
+        client.post("/api/chat/conversations")
+        resp = client.get("/api/chat/conversations")
+        assert resp.status_code == 200
+        assert len(resp.json()["conversations"]) == 2
 
 
 class TestCreateConversation:
@@ -17,7 +41,7 @@ class TestCreateConversation:
         assert resp.status_code == 200
         data = resp.json()
         assert "conversation_id" in data
-        assert len(data["conversation_id"]) == 36
+        assert len(data["conversation_id"]) == 16
 
 
 class TestGetHistory:
@@ -78,7 +102,7 @@ class TestPollTask:
         assert resp.status_code == 200
         assert resp.json() == {"status": "pending"}
 
-    def test_done_status(self, queue_dir):
+    def test_done_status_returns_messages_list(self, queue_dir):
         task_id = "1_20260319T100000Z_abc123--def456--chat.message"
         cid = chat_service.create_conversation()
         done_path = queue_dir / "done" / f"{task_id}.yaml"
@@ -94,9 +118,88 @@ class TestPollTask:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "done"
-        assert data["message"]["role"] == "assistant"
-        assert data["message"]["content"] == "LLM response"
-        assert data["message"]["type"] == "chat"
+        assert isinstance(data["messages"], list)
+        assert len(data["messages"]) == 1
+        assert data["messages"][0]["role"] == "assistant"
+        assert data["messages"][0]["content"] == "LLM response"
+        assert data["messages"][0]["type"] == "chat"
+
+    def test_done_poll_twice_appends_once(self, queue_dir):
+        task_id = "1_20260319T100000Z_idempotent--def456--chat.message"
+        cid = chat_service.create_conversation()
+        done_path = queue_dir / "done" / f"{task_id}.yaml"
+        task_data = {
+            "id": task_id,
+            "status": "done",
+            "result": {"content": "Only once", "conversation_id": cid},
+            "payload": {"type": "chat.message", "conversation_id": cid},
+        }
+        done_path.write_text(yaml.dump(task_data))
+
+        # Poll twice
+        resp1 = client.get(f"/api/chat/tasks/{task_id}")
+        resp2 = client.get(f"/api/chat/tasks/{task_id}")
+
+        assert resp1.status_code == 200
+        assert resp2.status_code == 200
+        assert resp1.json()["messages"] == resp2.json()["messages"]
+
+        # Message should appear exactly once in conversation history
+        history = chat_service.get_history(cid)
+        matching = [m for m in history if m.content == "Only once"]
+        assert len(matching) == 1
+
+    def test_failed_poll_twice_appends_once(self, queue_dir):
+        task_id = "1_20260319T100000Z_idem_fail--def456--chat.message"
+        cid = chat_service.create_conversation()
+        failed_path = queue_dir / "failed" / f"{task_id}.yaml"
+        task_data = {
+            "id": task_id,
+            "status": "failed",
+            "error": "Timeout",
+            "payload": {"type": "chat.message", "conversation_id": cid},
+        }
+        failed_path.write_text(yaml.dump(task_data))
+
+        resp1 = client.get(f"/api/chat/tasks/{task_id}")
+        resp2 = client.get(f"/api/chat/tasks/{task_id}")
+
+        assert resp1.json()["messages"] == resp2.json()["messages"]
+
+        history = chat_service.get_history(cid)
+        error_msgs = [m for m in history if "Timeout" in m.content]
+        assert len(error_msgs) == 1
+
+    def test_done_structured_with_proposal(self, queue_dir):
+        task_id = "1_20260319T100000Z_abc123--def456--chat.message"
+        cid = chat_service.create_conversation()
+        done_path = queue_dir / "done" / f"{task_id}.yaml"
+        task_data = {
+            "id": task_id,
+            "status": "done",
+            "result": {
+                "structured": {
+                    "reply": "I'll create that.",
+                    "proposal": {
+                        "action": "create_github_issue",
+                        "parameters": {"title": "Test"},
+                        "description": "Create issue: Test",
+                    },
+                },
+                "conversation_id": cid,
+            },
+            "payload": {"type": "chat.message", "conversation_id": cid},
+        }
+        done_path.write_text(yaml.dump(task_data))
+
+        resp = client.get(f"/api/chat/tasks/{task_id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "done"
+        assert len(data["messages"]) == 2
+        assert data["messages"][0]["type"] == "chat"
+        assert data["messages"][1]["type"] == "confirmation"
+        assert data["messages"][1]["metadata"]["action"] == "create_github_issue"
 
     def test_failed_status(self, queue_dir):
         task_id = "1_20260319T100000Z_abc123--def456--chat.message"
@@ -114,13 +217,85 @@ class TestPollTask:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "failed"
-        assert data["message"]["role"] == "system"
-        assert "Connection refused" in data["message"]["content"]
-        assert data["message"]["type"] == "system"
+        assert isinstance(data["messages"], list)
+        assert data["messages"][0]["role"] == "system"
+        assert "Connection refused" in data["messages"][0]["content"]
+        assert data["messages"][0]["type"] == "system"
 
     def test_404_for_unknown_task(self, queue_dir):
         resp = client.get("/api/chat/tasks/nonexistent")
         assert resp.status_code == 404
+
+
+class TestRespondToProposal:
+    def test_reject_returns_immediate(self):
+        cid = chat_service.create_conversation()
+        messages = chat_service.receive_structured_reply(cid, {
+            "reply": "Ok.",
+            "proposal": {
+                "action": "test_action",
+                "parameters": {},
+                "description": "Do something",
+            },
+        })
+        proposal_id = messages[1].metadata["proposal_id"]
+        resp = client.post(
+            f"/api/chat/conversations/{cid}/proposals/{proposal_id}",
+            json={"option": "reject"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "message" in data
+        assert "task_id" not in data
+
+    def test_approve_registered_action_returns_task_id(self, queue_dir):
+        from app.chat import ACTION_REGISTRY
+        ACTION_REGISTRY["test_action"] = "service.test.action"
+        try:
+            cid = chat_service.create_conversation()
+            messages = chat_service.receive_structured_reply(cid, {
+                "reply": "Ok.",
+                "proposal": {
+                    "action": "test_action",
+                    "parameters": {},
+                    "description": "Do something",
+                },
+            })
+            proposal_id = messages[1].metadata["proposal_id"]
+            resp = client.post(
+                f"/api/chat/conversations/{cid}/proposals/{proposal_id}",
+                json={"option": "approve"},
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert "message" in data
+            assert "task_id" in data
+        finally:
+            ACTION_REGISTRY.pop("test_action", None)
+
+    def test_404_for_unknown_conversation(self):
+        resp = client.post(
+            "/api/chat/conversations/nonexistent/proposals/p1",
+            json={"option": "approve"},
+        )
+        assert resp.status_code == 404
+
+    def test_400_for_invalid_option(self):
+        cid = chat_service.create_conversation()
+        messages = chat_service.receive_structured_reply(cid, {
+            "reply": "Ok.",
+            "proposal": {
+                "action": "test_action",
+                "parameters": {},
+                "description": "Do something",
+            },
+        })
+        proposal_id = messages[1].metadata["proposal_id"]
+        resp = client.post(
+            f"/api/chat/conversations/{cid}/proposals/{proposal_id}",
+            json={"option": "invalid_choice"},
+        )
+        assert resp.status_code == 400
 
 
 class TestChatConfig:

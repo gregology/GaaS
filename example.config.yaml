@@ -86,3 +86,4 @@ directories:
   notes: /path/to/notes
   task_queue: /path/to/task_queue
   logs: /path/to/logs
+  chats: /path/to/chats                    # Conversation history (JSONL files)

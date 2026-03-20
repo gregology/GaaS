@@ -37,7 +37,13 @@ Available at `/ui/queue`. Shows pending, active, done, and failed task counts wi
 
 ### Chat interface
 
-Available at `/ui/chat`. Uses Alpine.js for client-side state, polling the task API for LLM responses. Messages are routed through the task queue (`chat.message` at priority 1) to serialize LLM access. Commands (e.g., `/clear`) are handled immediately without the LLM.
+Available at `/ui/chat`. Conversations persist as JSONL files on disk (one per conversation, configured via `directories.chats`). A dropdown lets users switch between previous conversations or start a new one.
+
+The LLM receives a structured output schema that lets it return a plain reply or a reply with a proposed action. When it proposes something, the UI renders a confirmation card with buttons. The buttons come from the service's manifest -- different actions can have different options. Approval enqueues a service task through the normal queue. The UI polls for the result.
+
+Three visual entities in the chat: user messages (right-aligned bubbles), assistant messages (left-aligned bubbles), and system messages (centered cards for confirmations, inline text for status). The system role handles proposals, action results, and errors. It's visually distinct from the assistant.
+
+The system prompt is built dynamically from `config.chat.system_prompt` plus descriptions of all registered chat actions. Actions are discovered from integration manifests at startup -- any service with a `chat` block is included.
 
 ### Dashboard features
 

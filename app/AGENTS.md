@@ -95,15 +95,41 @@ Falls back to the `note` route for service tasks that lack explicit `on_result` 
 
 New route types are added by implementing a handler function and adding an `elif` branch to the dispatcher.
 
-### Chat (`chat.py`, `chat_routes.py`)
+### Chat (`chat.py`, `chat_routes.py`, `conversation_store.py`)
 
-Conversational chat interface. The `ChatService` (in-memory, API process) manages conversation state; `chat_message_handler` runs in the worker to make LLM calls. Messages are routed through the task queue (`chat.message` at priority 1) to serialize LLM access. Commands (e.g., `/clear`) are handled immediately without the LLM. The web UI at `/ui/chat` uses Alpine.js for client-side state, polling the task API for LLM responses.
+Conversational chat interface with file-backed persistence and a proposal/confirmation system.
+
+**ConversationStore** (`conversation_store.py`): JSONL-backed storage, one file per conversation at `{config.directories.chats}/{id}.jsonl`. Conversation IDs are 16-char hex tokens (`secrets.token_hex(8)`). Each JSONL line is a self-contained message dict with `role`, `type`, `content`, `ts`, and optional `metadata`. Append-only writes via `O_APPEND` for crash safety. Methods: `create()`, `exists()`, `append()`, `read()`, `clear()`, `list_conversations()`, `find_proposal()`.
+
+**ChatService** (`chat.py`): Manages conversations via `ConversationStore`. Accepts an optional `store` parameter for test injection. Three message flows:
+
+1. **Plain chat**: User message → enqueue `chat.message` task → worker calls LLM → `receive_reply()` appends assistant message to JSONL.
+2. **Structured reply with proposal**: Worker returns `{structured: {reply, proposal}}` → `receive_structured_reply()` appends both an assistant message and a system confirmation message. The confirmation carries `metadata` with `proposal_id`, `action`, `parameters`, `options` (button definitions), and `status: "pending"`.
+3. **Proposal response**: User clicks a button → `handle_proposal_response()` validates the option against the proposal's allowed options. Rejections are immediate. Approvals enqueue a service task through the normal queue and return a `task_id` for the UI to poll.
+
+**Structured output**: The `chat_message_handler` (worker) requests JSON output matching `CHAT_RESPONSE_SCHEMA`: `{reply: string, proposal: {action, parameters, description} | null}`. Falls back to plain text if the LLM returns invalid JSON, so responses always reach the user.
+
+**System prompt**: Built dynamically by `_build_system_prompt()` from the user's `config.chat.system_prompt` plus an action instruction block assembled from `ACTION_METADATA`. The action block lists available actions with descriptions and parameter schemas so the LLM knows what it can propose. If no actions are registered, the block is omitted.
+
+**Action registry**: Populated automatically during integration registration. Services with a `chat` block in their manifest are registered as chat-proposable actions. Three dicts:
+
+- `ACTION_REGISTRY` maps action name → service task type string (e.g., `"service.github.create_issue"`). When a proposal is approved, the system enqueues a task of this type through the normal queue.
+- `ACTION_OPTIONS` maps action name → list of response options for the confirmation UI. Actions not in the map get `DEFAULT_OPTIONS` (Approve/Cancel).
+- `ACTION_METADATA` maps action name → `{description, input_schema}` for building the system prompt.
+
+The LLM proposes actions via structured output; deterministic code defines what responses are valid and what they do. Approved proposals go through the task queue, getting dedup, rate limiting, result routing, and audit logging for free.
+
+**Idempotency**: `poll_task` can be called multiple times for the same task (the UI polls on an interval). `ChatService._processed_tasks` caches the messages produced by the first call. Subsequent polls return the cached result without appending to the JSONL again.
+
+**Message types**: `chat` (conversation), `command` (slash command results), `confirmation` (proposals awaiting response), `response` (user's answer to a proposal), `system` (errors, action results).
 
 API endpoints under `/api/chat`:
+- `GET /conversations` — list all conversations
 - `POST /conversations` — create conversation
 - `GET /conversations/{id}/history` — message history
 - `POST /conversations/{id}/messages` — send message (enqueues task or handles command)
-- `GET /tasks/{task_id}` — poll for task completion
+- `POST /conversations/{id}/proposals/{proposal_id}` — respond to a proposal (body: `{option: "approve"}`). Returns `{message, task_id?}` — `task_id` present when action was enqueued.
+- `GET /tasks/{task_id}` — poll for task completion (returns `messages` list, idempotent)
 
 ### Worker (`worker.py`)
 

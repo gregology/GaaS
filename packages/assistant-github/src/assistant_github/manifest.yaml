@@ -45,3 +45,22 @@ platforms:
           type: boolean
           default: false
       required: []
+services:
+  create_issue:
+    name: "Create Issue"
+    description: "Create an issue in a GitHub repository"
+    handler: ".services.create_issue.handle"
+    reversible: false
+    input_schema:
+      properties:
+        repo: { type: string, description: "Repository in org/repo format" }
+        title: { type: string, description: "Issue title" }
+        body: { type: string, description: "Issue body" }
+      required: [repo, title]
+    chat:
+      description: "Create a GitHub issue"
+      options:
+        - id: approve
+          label: "Post issue"
+        - id: reject
+          label: "Cancel"

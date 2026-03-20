@@ -10,7 +10,7 @@ src/assistant_sdk/
   evaluate.py     # Automation evaluation engine (evaluate_automations, condition matching)
   classify.py     # build_schema(), make_jinja_env()
   store.py        # NoteStore (markdown + YAML frontmatter)
-  manifest.py     # IntegrationManifest, PlatformManifest, ServiceManifest dataclasses
+  manifest.py     # IntegrationManifest, PlatformManifest, ServiceManifest, ChatActionConfig dataclasses
   provenance.py   # resolve_provenance() - determines rule/llm/hybrid from condition keys
   runtime.py      # Runtime registration - decouples integrations from app singletons
   actions.py      # enqueue_actions() - partitions scripts, services, platform actions

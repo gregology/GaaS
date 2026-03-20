@@ -115,6 +115,7 @@ class DirectoriesConfig(BaseModel):
     notes: Path | None = None
     task_queue: Path = Path("data/queue")
     logs: Path = Path("logs")
+    chats: Path = Path("data/chats")
     custom_integrations: Path | None = None
 
 

@@ -11,6 +11,21 @@
     </div>
   </template>
 
+  <!-- Conversation selector -->
+  <div class="flex gap-2 pb-2 border-b border-base-300 mb-2">
+    <select
+      x-model="selectedConversation"
+      @change="switchConversation($event.target.value)"
+      class="select select-bordered select-sm flex-1"
+    >
+      <option value="">Current conversation</option>
+      <template x-for="conv in conversations" :key="conv.id">
+        <option :value="conv.id" x-text="conv.id.slice(0, 8) + '… (' + conv.message_count + ' messages)'"></option>
+      </template>
+    </select>
+    <button @click="newConversation()" class="btn btn-sm btn-ghost">New</button>
+  </div>
+
   <!-- Chat messages area -->
   <div x-ref="chatArea" class="flex-1 overflow-y-auto space-y-2 pb-4">
 
@@ -24,8 +39,8 @@
     <!-- Messages -->
     <template x-for="(msg, index) in messages" :key="index">
       <div>
-        <!-- User message -->
-        <template x-if="msg.role === 'user'">
+        <!-- User message (chat or response) -->
+        <template x-if="msg.role === 'user' && msg.type !== 'response'">
           <div class="chat chat-end">
             <div class="chat-bubble chat-bubble-primary" x-text="msg.content"></div>
           </div>
@@ -38,13 +53,49 @@
           </div>
         </template>
 
-        <!-- System/command message -->
-        <template x-if="msg.type === 'command' || msg.type === 'system'">
-          <template x-if="msg.role !== 'user'">
-            <div class="text-center py-1">
-              <span class="text-sm text-base-content/50 italic" x-text="msg.content"></span>
+        <!-- Confirmation message (proposal) -->
+        <template x-if="msg.type === 'confirmation' && msg.metadata">
+          <div class="flex justify-center py-2">
+            <div class="card bg-base-200 w-full max-w-lg">
+              <div class="card-body p-4">
+                <p class="text-sm" x-text="msg.content"></p>
+                <template x-if="msg.metadata.parameters">
+                  <div class="text-xs text-base-content/60 mt-1 font-mono">
+                    <template x-for="(val, key) in msg.metadata.parameters" :key="key">
+                      <div>
+                        <span class="font-semibold" x-text="key + ': '"></span>
+                        <span x-text="typeof val === 'string' ? val : JSON.stringify(val)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="msg.metadata.status === 'pending'">
+                  <div class="card-actions justify-end mt-2">
+                    <template x-for="opt in msg.metadata.options" :key="opt.id">
+                      <button
+                        class="btn btn-sm"
+                        :class="opt.id === 'reject' ? 'btn-ghost' : 'btn-primary'"
+                        @click="respondToProposal(msg, opt.id)"
+                        x-text="opt.label"
+                      ></button>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="msg.metadata.status !== 'pending'">
+                  <div class="text-xs text-base-content/50 mt-2 italic"
+                       x-text="msg.metadata.status === 'approved' ? 'Approved' : 'Cancelled'">
+                  </div>
+                </template>
+              </div>
             </div>
-          </template>
+          </div>
+        </template>
+
+        <!-- System/command message -->
+        <template x-if="(msg.type === 'command' || msg.type === 'system') && msg.role !== 'user'">
+          <div class="text-center py-1">
+            <span class="text-sm text-base-content/50 italic" x-text="msg.content"></span>
+          </div>
         </template>
       </div>
     </template>
@@ -81,6 +132,8 @@
 function chatApp() {
   return {
     conversationId: null,
+    selectedConversation: '',
+    conversations: [],
     messages: [],
     input: '',
     loading: false,
@@ -88,13 +141,46 @@ function chatApp() {
     pollTimer: null,
 
     async init() {
+      await this.loadConversations();
+      await this.newConversation();
+    },
+
+    async loadConversations() {
+      try {
+        const res = await fetch('/api/chat/conversations');
+        if (res.ok) {
+          const data = await res.json();
+          this.conversations = data.conversations;
+        }
+      } catch (e) {
+        // Non-fatal — conversation list is optional
+      }
+    },
+
+    async newConversation() {
       try {
         const res = await fetch('/api/chat/conversations', { method: 'POST' });
         if (!res.ok) throw new Error('Failed to create conversation');
         const data = await res.json();
         this.conversationId = data.conversation_id;
+        this.selectedConversation = '';
+        this.messages = [];
       } catch (e) {
         this.error = 'Failed to initialize chat: ' + e.message;
+      }
+    },
+
+    async switchConversation(id) {
+      if (!id) return;
+      try {
+        const res = await fetch(`/api/chat/conversations/${id}/history`);
+        if (!res.ok) throw new Error('Failed to load conversation');
+        const data = await res.json();
+        this.conversationId = id;
+        this.messages = data.messages;
+        this.scrollToBottom();
+      } catch (e) {
+        this.error = 'Failed to load conversation: ' + e.message;
       }
     },
 
@@ -164,16 +250,12 @@ function chatApp() {
           }
           const data = await res.json();
 
-          if (data.status === 'done') {
+          if (data.status === 'done' || data.status === 'failed') {
             clearInterval(this.pollTimer);
             this.pollTimer = null;
-            this.messages.push(data.message);
-            this.loading = false;
-            this.scrollToBottom();
-          } else if (data.status === 'failed') {
-            clearInterval(this.pollTimer);
-            this.pollTimer = null;
-            this.messages.push(data.message);
+            for (const msg of data.messages) {
+              this.messages.push(msg);
+            }
             this.loading = false;
             this.scrollToBottom();
           }
@@ -185,6 +267,40 @@ function chatApp() {
           this.error = 'Failed to get response: ' + e.message;
         }
       }, 1000);
+    },
+
+    async respondToProposal(msg, optionId) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await fetch(
+          `/api/chat/conversations/${this.conversationId}/proposals/${msg.metadata.proposal_id}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ option: optionId })
+          }
+        );
+        if (!res.ok) throw new Error('Failed to respond to proposal');
+        const data = await res.json();
+
+        // Mark the proposal as responded in local state
+        msg.metadata.status = optionId === 'reject' ? 'rejected' : 'approved';
+
+        // Add the status message (e.g., "Action cancelled." or "Processing...")
+        this.messages.push(data.message);
+        this.scrollToBottom();
+
+        if (data.task_id) {
+          // Action was enqueued — poll for the result
+          this.pollForResult(data.task_id);
+        } else {
+          this.loading = false;
+        }
+      } catch (e) {
+        this.loading = false;
+        this.error = 'Failed to respond to proposal: ' + e.message;
+      }
     }
   };
 }

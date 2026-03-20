@@ -73,7 +73,9 @@ Integrations are installable Python packages discovered through three channels: 
 
 Following the Home Assistant pattern, each integration contains **platforms** that handle specific resource types. The GitHub integration has `pull_requests` and `issues` platforms. The email integration has an `inbox` platform.
 
-Integrations can also declare **services** -- callable handlers invoked from automation `then` clauses rather than from polling schedules. The Gemini integration is service-only: no platforms, just a `web_research` service.
+Integrations can also declare **services** -- callable handlers invoked from automation `then` clauses or proposed by the LLM during chat conversations. The Gemini integration is service-only: no platforms, just a `web_research` service. The GitHub integration has both platforms and a `create_issue` service that the LLM can propose via the chat interface.
+
+Services that include a `chat` block in their manifest are automatically registered as chat-proposable actions at startup. The LLM's system prompt is built from these registrations. When the user approves a proposed action, the system enqueues a normal service task through the queue.
 
 Each platform declares its `handlers` in the integration's `manifest.yaml`, mapping task type suffixes to Python handler functions.
 

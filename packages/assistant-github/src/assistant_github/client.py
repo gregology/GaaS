@@ -179,6 +179,22 @@ class GitHubClient:
         log.info("_search_raw(%r): found %d results", query, len(entities))
         return entities
 
+    def create_issue(
+        self, org: str, repo: str, title: str, body: str = "",
+    ) -> dict[str, Any]:
+        """Create an issue in a GitHub repository. Returns {number, url}."""
+        cmd = [
+            "gh", "api", f"repos/{org}/{repo}/issues",
+            "--method", "POST",
+            "-f", f"title={title}",
+            "-f", f"body={body}",
+        ]
+        result = json.loads(self._run_gh(cmd, timeout=30))
+        return {
+            "number": result.get("number"),
+            "url": result.get("html_url", ""),
+        }
+
     def _scope_qualifiers(self, integration: Any) -> list[str]:
         """Build scope qualifiers from the integration's org/repo config."""
         qualifiers = []
