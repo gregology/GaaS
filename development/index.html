@@ -932,6 +932,7 @@ uv run pytest packages/assistant-email/tests/  # Email package tests only
 <li><code>/ui/config</code> - Full configuration viewer/editor with collapsible sections per integration</li>
 <li><code>/ui/queue</code> - Task queue browser (pending, active, done, failed)</li>
 <li><code>/ui/logs</code> - Audit log browser (daily markdown logs)</li>
+<li><code>/ui/chat</code> - Conversational chat interface (LLM responses via task queue polling)</li>
 </ul>
 <p>The config editor supports editing LLM profiles, scripts, directory paths, and integration-level settings. Changes are written back to <code>config.yaml</code> using ruamel.yaml to preserve comments and formatting. After saving, a "Restart Required" banner appears. The supervisor detects a restart sentinel file and restarts both processes automatically.</p>
 <p><code>!secret</code> values are displayed as masked placeholders and never resolved in the UI.</p>
