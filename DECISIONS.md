@@ -670,6 +670,10 @@ Config loads eagerly at import time. Tests need a valid `config.yaml` before any
 
 Why: without this, running tests on a fresh clone fails because `config.yaml` is gitignored. The bootstrap creates the minimum viable config.
 
+### Declined: change `tests/AGENTS.yaml` reference to `tests/AGENTS.md` in root AGENTS.md (issue #143, 2026-03-20)
+
+Issue #143 reported that line 158 of `AGENTS.md` references `tests/AGENTS.yaml` but the file does not exist, suggesting it should be `tests/AGENTS.md`. Declined because both files exist. `tests/AGENTS.yaml` contains the structured testing philosophy (reversibility tiers, decision boundary focus, safety test checklist) and is the correct reference target. `tests/AGENTS.md` is a separate file that itself cross-references `tests/AGENTS.yaml`. The current reference is accurate.
+
 ---
 
 ## Dependency Choices
