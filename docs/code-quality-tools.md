@@ -43,6 +43,8 @@ uv run pytest --cov=app --cov-report=term-missing -v
 
 Package test directories (`packages/*/tests/`) are excluded from mypy. Multiple packages have identically named test files (e.g. `test_classify.py` in both `assistant-email` and `assistant-sdk`), and mypy treats those as duplicate modules. The top-level `tests/` directory is still checked. The package test directories don't have `__init__.py` files -- pytest discovers them fine without those since the project uses `--import-mode=importlib`.
 
+The entire `packages/assistant-gemini/` package is also excluded from mypy. Its Gemini SDK dependencies lack type stubs and the package hasn't been brought up to strict-mode standards yet. If you're adding code there, run `uv run mypy packages/assistant-gemini/ --ignore-missing-imports` manually to catch regressions.
+
 **When to run it:** Before any refactor that touches function signatures or data flow. The SDK should stay at zero mypy errors. The `--ignore-missing-imports` flag is needed because some third-party packages don't ship type stubs.
 
 **What to ignore:** Third-party library complaints. Focus on `app/` and `packages/`.
