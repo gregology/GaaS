@@ -335,26 +335,38 @@ def _build_action_prompt() -> str:
     ]
 
     for action_name, meta in ACTION_METADATA.items():
-        desc = meta.get("description", "")
-        lines.append(f"\n  {action_name}")
-        if desc:
-            lines.append(f"    {desc}")
-
-        schema = meta.get("input_schema", {})
-        props = schema.get("properties", {})
-        required = set(schema.get("required", []))
-        if props:
-            lines.append("    Parameters:")
-            for param_name, param_def in props.items():
-                param_type = param_def.get("type", "string")
-                param_desc = param_def.get("description", "")
-                req = " (required)" if param_name in required else ""
-                line = f"      - {param_name}: {param_type}{req}"
-                if param_desc:
-                    line += f" — {param_desc}"
-                lines.append(line)
+        lines.extend(_format_action(action_name, meta))
 
     return "\n".join(lines)
+
+
+def _format_action(action_name: str, meta: dict[str, Any]) -> list[str]:
+    """Format a single action's description and parameters for the prompt."""
+    lines = [f"\n  {action_name}"]
+    desc = meta.get("description", "")
+    if desc:
+        lines.append(f"    {desc}")
+
+    schema = meta.get("input_schema", {})
+    props = schema.get("properties", {})
+    required = set(schema.get("required", []))
+    if props:
+        lines.append("    Parameters:")
+        for param_name, param_def in props.items():
+            lines.append(_format_param(param_name, param_def, param_name in required))
+
+    return lines
+
+
+def _format_param(name: str, defn: dict[str, Any], required: bool) -> str:
+    """Format a single parameter line."""
+    param_type = defn.get("type", "string")
+    param_desc = defn.get("description", "")
+    req = " (required)" if required else ""
+    line = f"      - {name}: {param_type}{req}"
+    if param_desc:
+        line += f" — {param_desc}"
+    return line
 
 
 # ---------------------------------------------------------------------------
