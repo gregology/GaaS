@@ -1,0 +1,1108 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../../development/">
+      
+      
+        <link rel="next" href="../philosophy/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Guide - Assistant</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#testing-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Assistant" class="md-header__button md-logo" aria-label="Assistant" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Assistant
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Assistant" class="md-nav__button md-logo" aria-label="Assistant" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Assistant
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/safety-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/human-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Human Log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Testing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test organization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixtures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safety-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Safety tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#property-based-tests-test_automation_invariantspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property-based tests (test_automation_invariants.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaos-tests-test_chaospy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chaos tests (test_chaos.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provenance-tests-test_provenancepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provenance tests (test_provenance.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stateful-queue-testing-test_queuepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stateful queue testing (test_queue.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filesystem-snapshot-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filesystem snapshot pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklist-adding-a-new-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklist: adding a new action
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../philosophy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Philosophy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code-quality-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Quality Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test organization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixtures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safety-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Safety tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#property-based-tests-test_automation_invariantspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property-based tests (test_automation_invariants.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaos-tests-test_chaospy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chaos tests (test_chaos.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provenance-tests-test_provenancepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provenance tests (test_provenance.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stateful-queue-testing-test_queuepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stateful queue testing (test_queue.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filesystem-snapshot-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filesystem snapshot pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklist-adding-a-new-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklist: adding a new action
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="testing-guide">Testing Guide</h1>
+<p>This is the practical companion to the <a href="../philosophy/">testing philosophy</a>. It covers where tests live, what fixtures are available, and how to add tests when you introduce new actions.</p>
+<h2 id="running-tests">Running tests</h2>
+<pre><code class="language-bash">uv run pytest -v                           # All tests (core + packages)
+uv run pytest tests/safety                 # Safety tests only
+uv run pytest packages/assistant-email/tests/   # Email tests in isolation (no app config)
+uv run pytest packages/assistant-gemini/tests/  # Gemini tests in isolation
+uv run pytest packages/assistant-github/tests/  # GitHub tests in isolation
+uv run pytest packages/assistant-sdk/tests/     # SDK tests in isolation
+</code></pre>
+<p>CI runs on GitHub Actions (<code>.github/workflows/test.yml</code>): checkout, setup uv, sync, pytest.</p>
+<h2 id="test-organization">Test organization</h2>
+<pre><code>tests/
+  conftest.py                           # Shared fixtures
+  test_actions.py                       # Shared action partitioning, input resolution, template rendering
+  test_cli.py                           # CLI parser routing, setup wizard, doctor subcommands
+  test_config.py                        # YoloAction tag parsing, ScriptConfig, QueuePolicyConfig models
+  test_llm.py                           # LLM conversation, schema validation, structured output retry
+  test_loader.py                        # Integration discovery, manifest parsing, dynamic model construction
+  test_queue.py                         # Queue lifecycle + stateful property tests
+  test_queue_policy.py                  # Dedup, rate limiting, fingerprint, policy resolution
+  test_result_routes.py                 # Service result routing (note persistence, custom paths, fallbacks)
+  test_scheduler.py                     # interval_to_cron conversion and range validation
+  test_script_execution.py              # Script executor, output capture, input injection, timeout handling
+  test_sdk.py                           # SDK public API imports, ServiceManifest defaults, runtime registration
+  test_services.py                      # Service manifest parsing, handler registration, enqueue with on_result
+  test_store.py                         # NoteStore CRUD + archive
+  test_supervisor.py                    # Process supervisor lifecycle, sentinel file, restart endpoint
+  test_ui_presenters.py                 # UI presenters: secret masking, classification/automation formatting
+  test_ui_routes.py                     # Web UI route handlers, secret masking in rendered pages
+  test_worker.py                        # Worker dispatch, lifecycle (happy/fail/routing), stale recovery
+  test_yaml_rw.py                       # YAML config round-trip read/write, comment preservation
+  safety/
+    test_automation_invariants.py        # Property tests: all possible classifications
+    test_chaos.py                        # Chaos tests: garbage LLM output
+    test_provenance.py                   # Provenance derivation + safety validation
+    test_reference_validation.py         # Script/service reference existence warnings
+
+packages/assistant-email/tests/
+  test_act.py                            # Action execution, allowlist enforcement
+  test_check.py                          # Window parsing, inbox fetch ordering, IMAP criteria
+  test_classify.py                       # Condition matching, operators, schema building
+  test_email_store.py                    # EmailStore message-ID sanitization, dedup across subdirs
+  test_evaluate.py                       # Snapshot construction, resolver patterns, automation evaluation
+  test_mail_parsing.py                   # Header parsing (auth, unsubscribe, dates, calendar)
+
+packages/assistant-gemini/tests/
+  test_client.py                         # GeminiClient two-pass flow (mocked)
+  test_web_research.py                   # Service handler with/without output_schema
+
+packages/assistant-github/tests/
+  test_client.py                         # GitHub API client parsing, search dedup, PR status derivation
+  test_entity_store.py                   # GitHubEntityStore: save, find, find_anywhere, move_to_synced
+  test_evaluate.py                       # PR/Issue snapshot construction, resolver, automation evaluation
+  test_issue_store.py                    # IssueStore save, field mappings, URL generation, defaults
+  test_pr_store.py                       # PullRequestStore save, field mappings, URL generation
+
+packages/assistant-sdk/tests/
+  test_action_partitioning.py            # Action detection, input resolution, script/service partitioning
+  test_classify.py                       # Schema building (confidence/boolean/enum), Jinja2 environment
+  test_evaluate.py                       # Automation evaluation engine: conditions, operators, dedup
+  test_manifest.py                       # Manifest dataclasses (Service, Platform, Integration)
+  test_models.py                         # Pydantic config models: YoloAction, ClassificationConfig
+  test_note_store.py                     # NoteStore CRUD, archive, directory creation
+  test_provenance.py                     # Provenance resolution from condition keys (rule/llm/hybrid)
+  test_runtime.py                        # Runtime registration pattern and RuntimeNotRegistered guards
+  test_task.py                           # TaskPayload and TaskRecord TypedDict smoke tests
+</code></pre>
+<p>Package tests import from <code>assistant_sdk.*</code> directly. They run without loading the app config singleton, which means they can be executed in isolation.</p>
+<h2 id="fixtures">Fixtures</h2>
+<p>Defined in <code>tests/conftest.py</code>:</p>
+<ul>
+<li><strong><code>queue_dir</code></strong> - Creates an isolated temp directory with queue subdirectories (<code>pending/</code>, <code>active/</code>, <code>done/</code>, <code>failed/</code>) and monkeypatches <code>queue.BASE_DIR</code> to point at it. Each test gets a clean queue.</li>
+<li><strong><code>notes_dir</code></strong> - Isolated temp directory for NoteStore operations.</li>
+<li><strong>Config bootstrap</strong> - If <code>config.yaml</code> doesn't exist when tests run, <code>conftest.py</code> creates a minimal one automatically. This is needed because config loads eagerly at import time.</li>
+</ul>
+<h2 id="safety-tests">Safety tests</h2>
+<h3 id="property-based-tests-test_automation_invariantspy">Property-based tests (<code>test_automation_invariants.py</code>)</h3>
+<p>Uses Hypothesis to generate 500 random classification outputs per test and asserts:</p>
+<ul>
+<li>Only known actions appear in the output (the <code>ALLOWED_ACTIONS</code> set)</li>
+<li>The number of actions produced is bounded</li>
+<li>Missing classification keys never trigger automations (safe default behavior)</li>
+</ul>
+<h3 id="chaos-tests-test_chaospy">Chaos tests (<code>test_chaos.py</code>)</h3>
+<p>Injects specific fault patterns at the classification level and asserts that safety boundaries still hold. Each chaos scenario produces only allowed actions with no crashes. See the <a href="../philosophy/">testing philosophy</a> for the full list of fault patterns.</p>
+<h3 id="provenance-tests-test_provenancepy">Provenance tests (<code>test_provenance.py</code>)</h3>
+<p>Tests the provenance derivation system (<code>resolve_provenance</code>) and the startup safety validation (<code>_validate_automation_safety</code>). Verifies that irreversible actions from non-deterministic provenance are blocked unless <code>!yolo</code> is set. Covers script actions: scripts from LLM provenance are blocked by default, allowed with <code>!yolo</code> or when the script has <code>reversible: true</code>. Operates at the platform level, matching how automations are configured per-platform in the config.</p>
+<h2 id="stateful-queue-testing-test_queuepy">Stateful queue testing (<code>test_queue.py</code>)</h2>
+<p><code>QueueStateMachine</code> uses Hypothesis <code>RuleBasedStateMachine</code> to randomly interleave enqueue, dequeue, complete, and fail operations. After every step, two invariants are checked:</p>
+<ul>
+<li>Total task count is conserved (tasks don't appear or disappear)</li>
+<li>No task ID appears in two directories simultaneously</li>
+</ul>
+<h2 id="filesystem-snapshot-pattern">Filesystem snapshot pattern</h2>
+<p>The standard way to assert on queue state after a lifecycle:</p>
+<pre><code class="language-python">def snapshot_tree(base: Path) -&gt; dict:
+    counts = {}
+    for subdir in sorted(base.iterdir()):
+        if subdir.is_dir():
+            counts[subdir.name] = len(list(subdir.iterdir()))
+    return {&quot;counts&quot;: counts, &quot;total&quot;: sum(counts.values())}
+</code></pre>
+<p>Assert on the whole tree, not individual files. After <code>enqueue -&gt; dequeue -&gt; complete</code>: pending is empty, active is empty, done has one file, total is conserved.</p>
+<h2 id="checklist-adding-a-new-action">Checklist: adding a new action</h2>
+<ol>
+<li>
+<p><strong>Categorize the reversibility tier.</strong> Read-only, soft reversible, hard reversible, or irreversible. This comes first. See the <a href="../../architecture/safety-model/">safety model</a> for tier definitions.</p>
+</li>
+<li>
+<p><strong>Add the action.</strong> For platform-specific actions: add to <code>SIMPLE_ACTIONS</code> or dict action handling in <code>act.py</code>. For cross-cutting actions (like scripts): add to the shared action layer in <code>assistant_sdk/actions.py</code>. For services: declare in the integration's <code>manifest.yaml</code> under <code>services:</code>. The <code>SIMPLE_ACTIONS</code> set must not grow without deliberate reversibility review.</p>
+</li>
+<li>
+<p><strong>Write tests matching the tier.</strong> Read-only gets unit tests. Soft reversible gets filesystem snapshot assertions. Hard reversible gets shadow/dry-run verification. Irreversible gets property-based safety invariants and mandatory dry run.</p>
+</li>
+<li>
+<p><strong>Add property-based coverage.</strong> Update <code>test_automation_invariants.py</code> so the Hypothesis-generated classifications can produce your new action. Add it to the <code>ALLOWED_ACTIONS</code> set.</p>
+</li>
+<li>
+<p><strong>Add chaos coverage.</strong> Update <code>test_chaos.py</code> to verify your action behaves correctly under garbage classification inputs. Add it to the <code>ALLOWED_ACTIONS</code> set there too.</p>
+</li>
+<li>
+<p><strong>Log it.</strong> Use <code>log.human()</code> when the action fires so it appears in the <a href="../../architecture/human-log/">daily audit log</a>.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

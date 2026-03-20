@@ -1,0 +1,1099 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../../design/">
+      
+      
+        <link rel="next" href="../safety-model/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Overview - Assistant</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#system-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Assistant" class="md-header__button md-logo" aria-label="Assistant" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Assistant
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Assistant" class="md-nav__button md-logo" aria-label="Assistant" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Assistant
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two processes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Task queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#queue-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Queue policies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#note-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integrations-and-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrations and platforms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integrations and platforms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-action-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared action layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-priorities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task priorities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM abstraction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safety-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../human-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Human Log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Testing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/philosophy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Philosophy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../code-quality-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Quality Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-processes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two processes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#task-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task queue
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Task queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#queue-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Queue policies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#note-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Note store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integrations-and-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrations and platforms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integrations and platforms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-action-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared action layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-priorities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task priorities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM abstraction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="system-architecture">System Architecture</h1>
+<p>Assistant runs as two processes that communicate through the filesystem.</p>
+<h2 id="the-two-processes">The two processes</h2>
+<p><strong>The FastAPI server</strong> (<code>app/main.py</code>) handles three things: a REST API for manual triggers, a cron scheduler that enqueues tasks on a timer, and a health check endpoint. It does not process tasks itself.</p>
+<p><strong>The worker</strong> (<code>app/worker.py</code>) is a simple polling loop. It pulls the next task from the queue, looks up the handler by task type string, runs it, and marks the task as done or failed. That's it.</p>
+<p>Both processes read the same config and write to the same filesystem directories. There is no shared memory, no message broker, no database. The filesystem is the coordination layer.</p>
+<h2 id="task-queue">Task queue</h2>
+<p>Tasks are YAML files that move between four directories:</p>
+<pre><code>data/queue/
+  pending/    # Waiting to be picked up
+  active/     # Currently being processed
+  done/       # Completed successfully
+  failed/     # Failed with error captured
+</code></pre>
+<p>Each file is named <code>{priority}_{timestamp}_{uuid}--{fingerprint}--{task_type}.yaml</code>. The priority prefix means a sorted directory listing returns tasks in priority order. Lower numbers go first. The <code>--</code> suffix encodes a SHA-256 fingerprint of the payload and the task type string, so policy checks (dedup, rate limiting) can work with globs instead of parsing YAML files.</p>
+<p>Dequeue uses <code>os.rename()</code>, which is atomic on POSIX. If two workers race for the same file, one gets a <code>FileNotFoundError</code> and moves on. No locks needed.</p>
+<p>Why filesystem instead of Redis or a proper message queue? Two reasons. First, you can <code>ls</code> the queue and see exactly what's happening. <code>pending/</code> has three files? Three tasks waiting. <code>failed/</code> has one? Something broke and you can read the YAML to see what. Second, it keeps memory usage low. RAM is better spent on LLM inference than on a queueing system.</p>
+<p>A task must exist in exactly one directory at all times. The test suite enforces this invariant with stateful property testing that randomly interleaves queue operations and checks conservation after every step.</p>
+<h3 id="queue-policies">Queue policies</h3>
+<p>Dedup and rate limiting are configured in <code>config.yaml</code> and enforced at enqueue time by <code>queue_policy.py</code>. Dedup is on by default -- if an identical payload is already sitting in <code>pending/</code>, the enqueue is skipped. Rate limits are opt-in per task type.</p>
+<pre><code class="language-yaml">queue_policies:
+  defaults:
+    deduplicate_pending: true
+  overrides:
+    service.gemini.web_research:
+      rate_limit:
+        max: 10
+        per: 1h
+</code></pre>
+<p>Manual API triggers bypass policies. The scheduler and automation-driven enqueues go through the policy layer. Rejected enqueues are logged at info level with the reason.</p>
+<h2 id="note-store">Note store</h2>
+<p>All persistent data uses the same pattern: markdown files with YAML frontmatter.</p>
+<pre><code class="language-yaml">---
+uid: &quot;12345&quot;
+from_address: sender@example.com
+subject: Hello
+classification:
+  human: 0.85
+  requires_response: true
+---
+(optional body content)
+</code></pre>
+<p>The generic <code>NoteStore</code> class (<code>assistant_sdk.store</code>) handles reading, writing, and moving these files. Platform-specific stores like <code>EmailStore</code>, <code>PullRequestStore</code>, and <code>IssueStore</code> wrap it with domain methods, but the underlying storage is always markdown with frontmatter.</p>
+<p>This means every piece of state in the system is human-readable. You can open any file in a text editor and see exactly what Assistant knows about an email or an issue, including the raw classification results.</p>
+<h2 id="integrations-and-platforms">Integrations and platforms</h2>
+<p>Integrations are installable Python packages discovered through three channels: a builtin directory (<code>app/integrations/</code>), a user-configurable custom directory, and Python entry points (<code>assistant.integrations</code> group). Email and GitHub ship as packages under <code>packages/</code> and register via entry points. The <code>app/integrations/</code> directory holds the handler registry and loader, plus any builtin overrides.</p>
+<p>Following the Home Assistant pattern, each integration contains <strong>platforms</strong> that handle specific resource types. The GitHub integration has <code>pull_requests</code> and <code>issues</code> platforms. The email integration has an <code>inbox</code> platform.</p>
+<p>Integrations can also declare <strong>services</strong> -- callable handlers invoked from automation <code>then</code> clauses rather than from polling schedules. The Gemini integration is service-only: no platforms, just a <code>web_research</code> service.</p>
+<p>Each platform declares its <code>handlers</code> in the integration's <code>manifest.yaml</code>, mapping task type suffixes to Python handler functions.</p>
+<pre><code class="language-yaml"># manifest.yaml
+platforms:
+  pull_requests:
+    handlers:
+      check: &quot;.platforms.pull_requests.check.handle&quot;
+      collect: &quot;.platforms.pull_requests.collect.handle&quot;
+      classify: &quot;.platforms.pull_requests.classify.handle&quot;
+services:
+  web_research:
+    handler: &quot;.services.web_research.handle&quot;
+    human_log: &quot;Web research: {{ prompt | truncate(80) }}&quot;
+</code></pre>
+<p>The top-level <code>app/integrations/__init__.py</code> registers these with the domain and platform prefixes, producing task types like <code>email.inbox.check</code> or <code>github.pull_requests.classify</code>. Service handlers register as <code>service.{domain}.{service_name}</code>. The worker routes tasks to handlers using these strings.</p>
+<p>Each platform also has an entry task. This is the starting point when a schedule fires or someone hits the API. The scheduler enqueues entry tasks for each enabled platform within an integration. Entry tasks discover work (new emails, new PRs, new issues) and enqueue downstream tasks to process it.</p>
+<p>There is no mandatory pipeline shape. Email uses a five-stage pipeline: <code>check -&gt; collect -&gt; classify -&gt; evaluate -&gt; act</code>. GitHub uses the same pattern. New integrations define whatever flow makes sense for their domain.</p>
+<h3 id="shared-action-layer">Shared action layer</h3>
+<p>Some actions are cross-cutting -- they can be triggered from any integration's automations. Scripts and services are the two cross-cutting action types.</p>
+<p>The shared action layer (<code>assistant_sdk.actions</code>, re-exported via <code>app/actions/</code>) handles these. Each platform's evaluate handler calls <code>enqueue_actions()</code>, which partitions the action list: script actions become individual <code>script.run</code> queue tasks, service actions become individual <code>service.{domain}.{service_name}</code> queue tasks, and platform actions get bundled into the platform's act task as before. The partitioning is transparent to the rest of the pipeline.</p>
+<p>Script tasks run as first-class queue citizens with independent failure tracking, timeout enforcement, and in-script logging via preamble-injected helper functions (<code>log_human</code>, <code>log_info</code>, <code>log_warn</code>). Service tasks run the handler function declared in the integration's manifest. When a service handler returns data, the worker stores the full result in the completed task YAML first, then routes it via <code>on_result</code> descriptors in the task payload (<code>app/result_routes.py</code>). The default route saves results as a markdown note under <code>{notes_dir}/services/{domain}/{service_name}/</code> with frontmatter metadata and a human log breadcrumb. If routing fails, the result is preserved in <code>done/</code> and can be re-routed.</p>
+<h3 id="task-priorities">Task priorities</h3>
+<p>Tasks enqueue downstream tasks with explicit priorities:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Discovery and collection (get data quickly)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Default</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Classification (process after collection)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Actions (execute after classification)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Low confidence items (e.g. unauthenticated emails)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="llm-abstraction">LLM abstraction</h2>
+<p>Assistant is backend-agnostic for LLM inference. Config defines named profiles (<code>default</code>, <code>fast</code>, etc.) with different <code>base_url</code>, <code>model</code>, <code>token</code>, and <code>parameters</code>. Integrations reference profiles by name.</p>
+<p>The <code>LLMConversation</code> class manages multi-turn conversations and supports structured output with JSON schema validation. If the LLM returns something that doesn't match the schema, it retries up to three times.</p>
+<p>Local inference via Ollama or any OpenAI-compatible endpoint is the default. Remote backends work too, but the config system warns users that data will leave their machine.</p>
+<h2 id="config">Config</h2>
+<p>Configuration uses Home Assistant-inspired YAML with <code>!secret</code> references to a separate <code>secrets.yaml</code>. Both files are gitignored.</p>
+<pre><code class="language-yaml">llms:
+  default:
+    base_url: http://localhost:11434/v1
+    model: llama3.2
+
+integrations:
+  - type: email
+    name: personal
+    imap_server: imap.example.com
+    password: !secret email_password
+    schedule:
+      every: 30m
+    platforms:
+      inbox:
+        automations:
+          - when:
+              is_noreply: true
+            then: archive
+</code></pre>
+<p>Pydantic models validate everything at startup. Classification shorthand (<code>human: "is this a personal email?"</code>) gets normalized to full config objects. Schedule formats accept both <code>every: 30m</code> and <code>cron: "0 8-18 * * 1-5"</code>. Classifications and automations are configured per-platform rather than per-integration.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
