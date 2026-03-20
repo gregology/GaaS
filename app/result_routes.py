@@ -43,6 +43,8 @@ def route_results(result: dict[str, Any], task: TaskRecord) -> None:
         try:
             if route_type == "note":
                 _route_note(result, task, route)
+            elif route_type == "chat_reply":
+                _route_chat_reply(result, task, route)
             else:
                 log.warning("Unknown result route type: %s", route_type)
         except Exception:
@@ -51,6 +53,17 @@ def route_results(result: dict[str, Any], task: TaskRecord) -> None:
                 task.get("id"),
                 route,
             )
+
+
+def _route_chat_reply(result: dict[str, Any], task: TaskRecord, route_config: dict[str, Any]) -> None:
+    """Handle chat reply result routing.
+
+    For the web UI channel, delivery is pull-based (client polls).
+    This handler logs the interaction for the audit trail.
+    """
+    conversation_id = route_config.get("conversation_id", "unknown")
+    content = result.get("content", "")
+    log.human("Chat reply [%s]: %s", conversation_id[:8], content[:100])
 
 
 def _route_note(result: dict[str, Any], task: TaskRecord, route_config: dict[str, Any]) -> Path:

@@ -68,6 +68,10 @@ integrations:
     api_key: !secret gemini_api_key
     model: gemini-3-pro-preview 
 
+chat:
+  llm: default
+  system_prompt: You are a helpful assistant.
+
 queue_policies:                          # Optional: dedup + rate limiting + retention
   retention: 7d                          # How long to keep done/failed task files (default: 7d)
   defaults:
