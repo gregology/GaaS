@@ -1,6 +1,6 @@
 """Tests for the create_issue service handler."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from assistant_github.services.create_issue import handle
 
