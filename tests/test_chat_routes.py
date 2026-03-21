@@ -149,6 +149,37 @@ class TestPollTask:
         matching = [m for m in history if m.content == "Only once"]
         assert len(matching) == 1
 
+    def test_done_service_result_with_text(self, queue_dir):
+        task_id = "1_20260319T100000Z_svc123--def456--service.github.create_issue"
+        cid = chat_service.create_conversation()
+        done_path = queue_dir / "done" / f"{task_id}.yaml"
+        task_data = {
+            "id": task_id,
+            "status": "done",
+            "result": {
+                "text": "Issue #42 created: https://github.com/org/repo/issues/42",
+                "number": 42,
+            },
+            "payload": {
+                "type": "service.github.create_issue",
+                "on_result": [
+                    {"type": "chat_reply", "conversation_id": cid},
+                ],
+            },
+        }
+        done_path.write_text(yaml.dump(task_data))
+
+        resp = client.get(f"/api/chat/tasks/{task_id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "done"
+        assert len(data["messages"]) == 1
+        assert data["messages"][0]["role"] == "system"
+        assert "Issue #42" in data["messages"][0]["content"]
+
+        history = chat_service.get_history(cid)
+        assert any("Issue #42" in m.content for m in history)
+
     def test_failed_poll_twice_appends_once(self, queue_dir):
         task_id = "1_20260319T100000Z_idem_fail--def456--chat.message"
         cid = chat_service.create_conversation()

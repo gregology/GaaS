@@ -104,25 +104,31 @@ async def poll_task(task_id: str) -> dict[str, Any]:
     # Check done/
     done_path = queue.BASE_DIR / "done" / filename
     if done_path.exists():
-        cached = chat_service.check_task_processed(task_id)
-        if cached is not None:
-            return {"status": "done", "messages": [asdict(m) for m in cached]}
-
         task = yaml.safe_load(done_path.read_text())
         result = task.get("result", {})
         payload = task.get("payload", {})
         conversation_id = _extract_conversation_id(result, payload)
 
+        cached = chat_service.check_task_processed(task_id, conversation_id)
+        if cached is not None:
+            return {"status": "done", "messages": [asdict(m) for m in cached]}
+
         if "structured" in result:
             messages = chat_service.receive_structured_reply(
-                conversation_id, result["structured"],
+                conversation_id, result["structured"], task_id=task_id,
             )
         elif "content" in result:
-            messages = chat_service.receive_reply(conversation_id, result["content"])
+            messages = chat_service.receive_reply(
+                conversation_id, result["content"], task_id=task_id,
+            )
         else:
             # Service task result — use "text" field
             text = result.get("text", "Action completed.")
-            messages = chat_service.receive_service_result(conversation_id, text)
+            if not result.get("text"):
+                log.warning("Task %s result has no text/content/structured key", task_id)
+            messages = chat_service.receive_service_result(
+                conversation_id, text, task_id=task_id,
+            )
 
         chat_service.mark_task_processed(task_id, messages)
         return {"status": "done", "messages": [asdict(m) for m in messages]}
@@ -130,14 +136,15 @@ async def poll_task(task_id: str) -> dict[str, Any]:
     # Check failed/
     failed_path = queue.BASE_DIR / "failed" / filename
     if failed_path.exists():
-        cached = chat_service.check_task_processed(task_id)
+        task = yaml.safe_load(failed_path.read_text())
+        payload = task.get("payload", {})
+        conversation_id = _extract_conversation_id({}, payload)
+
+        cached = chat_service.check_task_processed(task_id, conversation_id)
         if cached is not None:
             return {"status": "failed", "messages": [asdict(m) for m in cached]}
 
-        task = yaml.safe_load(failed_path.read_text())
         error = task.get("error", "Unknown error")
-        payload = task.get("payload", {})
-        conversation_id = _extract_conversation_id({}, payload)
         task_type = payload.get("type", "Task")
         msg = chat_service.record_error(
             conversation_id, f"{task_type} failed: {error}",

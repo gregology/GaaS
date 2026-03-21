@@ -61,7 +61,8 @@ class ConversationStore:
         if metadata is not None:
             record["metadata"] = metadata
         line = json.dumps(record, separators=(",", ":")) + "\n"
-        # O_APPEND guarantees atomic appends up to PIPE_BUF (4096 bytes)
+        # O_APPEND is used for crash safety (no partial overwrites), not
+        # multi-writer atomicity. Single-writer architecture assumed.
         fd = os.open(path, os.O_WRONLY | os.O_APPEND)
         try:
             os.write(fd, line.encode())
@@ -131,3 +132,16 @@ class ConversationStore:
             if meta and meta.get("proposal_id") == proposal_id:
                 return msg
         return None
+
+    def has_response(
+        self, conversation_id: str, proposal_id: str,
+    ) -> bool:
+        """Check whether a response message already exists for a proposal."""
+        messages = self.read(conversation_id)
+        for msg in reversed(messages):
+            if msg.get("type") != "response":
+                continue
+            meta = msg.get("metadata")
+            if meta and meta.get("proposal_id") == proposal_id:
+                return True
+        return False

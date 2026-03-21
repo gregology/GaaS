@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import secrets
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from typing import Any
@@ -35,12 +36,15 @@ class ChatMessage:
     metadata: dict[str, Any] | None = field(default=None)
 
 
+_TASK_CACHE_MAX = 256
+
+
 class ChatService:
     def __init__(self, store: ConversationStore | None = None) -> None:
         if store is None:
             store = ConversationStore(config.directories.chats)
         self._store = store
-        self._processed_tasks: dict[str, list[ChatMessage]] = {}
+        self._processed_tasks: OrderedDict[str, list[ChatMessage]] = OrderedDict()
 
     def create_conversation(self) -> str:
         return self._store.create()
@@ -85,38 +89,68 @@ class ChatService:
         task_id = queue.enqueue(payload, priority=1)
         return {"type": "chat", "task_id": task_id}
 
-    def check_task_processed(self, task_id: str) -> list[ChatMessage] | None:
-        """Return cached messages if this task was already processed."""
-        return self._processed_tasks.get(task_id)
+    def check_task_processed(
+        self, task_id: str, conversation_id: str = "",
+    ) -> list[ChatMessage] | None:
+        """Return cached messages if this task was already processed.
+
+        Checks the in-memory cache first. On a cache miss (e.g., after
+        restart), scans the JSONL for a message tagged with this task_id.
+        """
+        cached = self._processed_tasks.get(task_id)
+        if cached is not None:
+            return cached
+        # Survive restarts: check the JSONL for a message with this task_id
+        if conversation_id and self._store.exists(conversation_id):
+            for row in self._store.read(conversation_id):
+                meta = row.get("metadata")
+                if meta and meta.get("task_id") == task_id:
+                    return []  # already processed, return empty to signal "skip"
+        return None
 
     def mark_task_processed(self, task_id: str, messages: list[ChatMessage]) -> None:
         """Cache messages for a processed task to prevent duplicate appends."""
         self._processed_tasks[task_id] = messages
+        while len(self._processed_tasks) > _TASK_CACHE_MAX:
+            self._processed_tasks.popitem(last=False)
 
-    def receive_reply(self, conversation_id: str, content: str) -> list[ChatMessage]:
+    def receive_reply(
+        self, conversation_id: str, content: str, task_id: str = "",
+    ) -> list[ChatMessage]:
         """Record a plain-text assistant reply. Returns a list of messages."""
         now = datetime.now(UTC).isoformat()
+        metadata = {"task_id": task_id} if task_id else None
         msg = ChatMessage(
             role="assistant", content=content, type="chat", timestamp=now,
+            metadata=metadata,
         )
         if self._store.exists(conversation_id):
-            self._store.append(conversation_id, msg.role, msg.type, msg.content)
+            self._store.append(
+                conversation_id, msg.role, msg.type, msg.content,
+                metadata=metadata,
+            )
         return [msg]
 
     def receive_service_result(
-        self, conversation_id: str, text: str,
+        self, conversation_id: str, text: str, task_id: str = "",
     ) -> list[ChatMessage]:
         """Record the result of a service task. Returns a list of messages."""
         now = datetime.now(UTC).isoformat()
+        metadata = {"task_id": task_id} if task_id else None
         msg = ChatMessage(
             role="system", content=text, type="system", timestamp=now,
+            metadata=metadata,
         )
         if self._store.exists(conversation_id):
-            self._store.append(conversation_id, msg.role, msg.type, msg.content)
+            self._store.append(
+                conversation_id, msg.role, msg.type, msg.content,
+                metadata=metadata,
+            )
         return [msg]
 
     def receive_structured_reply(
         self, conversation_id: str, structured: dict[str, Any],
+        task_id: str = "",
     ) -> list[ChatMessage]:
         """Process a structured LLM response with an optional proposal.
 
@@ -126,14 +160,16 @@ class ChatService:
         now = datetime.now(UTC).isoformat()
 
         # Always store the assistant's reply
+        reply_metadata = {"task_id": task_id} if task_id else None
         reply_msg = ChatMessage(
             role="assistant", content=structured["reply"], type="chat",
-            timestamp=now,
+            timestamp=now, metadata=reply_metadata,
         )
         messages.append(reply_msg)
         if self._store.exists(conversation_id):
             self._store.append(
                 conversation_id, reply_msg.role, reply_msg.type, reply_msg.content,
+                metadata=reply_metadata,
             )
 
         # If a proposal is present, store a confirmation message
@@ -182,6 +218,10 @@ class ChatService:
         proposal_msg = self._store.find_proposal(conversation_id, proposal_id)
         if proposal_msg is None:
             raise ValueError(f"Proposal {proposal_id} not found")
+
+        # Prevent double-approval after page reload
+        if self._store.has_response(conversation_id, proposal_id):
+            raise ValueError(f"Proposal {proposal_id} already responded to")
 
         metadata = proposal_msg.get("metadata", {})
 

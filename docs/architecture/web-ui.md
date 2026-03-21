@@ -45,6 +45,8 @@ Three visual entities in the chat: user messages (right-aligned bubbles), assist
 
 The system prompt is built dynamically from `config.chat.system_prompt` plus descriptions of all registered chat actions. Actions are discovered from integration manifests at startup -- any service with a `chat` block is included.
 
+**LLM backend compatibility note:** The structured output schema uses `oneOf: [null, object]` for the proposal field. Some local LLM backends behind OpenAI-compatible APIs don't handle this well. The worker falls back to plain text when the response isn't valid JSON, so proposals silently degrade to "never proposes anything" on those backends. If proposals never appear, check whether the backend supports JSON schema `oneOf` with null types.
+
 ### Dashboard features
 
 - **"Run Now" button** for each configured integration — triggers a POST to `/ui/integrations/{integration_id}/run`, wraps the existing `_run_integration` logic, and returns an HTML partial with enqueued task IDs

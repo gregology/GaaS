@@ -64,7 +64,11 @@ def _route_chat_reply(
     This handler logs the interaction for the audit trail.
     """
     conversation_id = route_config.get("conversation_id", "unknown")
-    content = result.get("content", "")
+    content = (
+        result.get("content", "")
+        or result.get("structured", {}).get("reply", "")
+        or result.get("text", "")
+    )
     log.human("Chat reply [%s]: %s", conversation_id[:8], content[:100])
 
 

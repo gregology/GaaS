@@ -191,6 +191,15 @@ class TestChatServiceReceiveStructuredReply:
 
 
 class TestChatServiceHandleProposalResponse:
+    @pytest.fixture(autouse=True)
+    def _clean_registry(self):
+        """Isolate ACTION_REGISTRY mutations."""
+        from app.chat import ACTION_REGISTRY
+        original = dict(ACTION_REGISTRY)
+        yield
+        ACTION_REGISTRY.clear()
+        ACTION_REGISTRY.update(original)
+
     def test_reject_proposal(self, svc):
         cid = svc.create_conversation()
         messages = svc.receive_structured_reply(cid, {
@@ -224,27 +233,24 @@ class TestChatServiceHandleProposalResponse:
     def test_approve_registered_action_enqueues(self, svc):
         from app.chat import ACTION_REGISTRY
         ACTION_REGISTRY["test_action"] = "service.test.action"
-        try:
-            cid = svc.create_conversation()
-            messages = svc.receive_structured_reply(cid, {
-                "reply": "Ok.",
-                "proposal": {
-                    "action": "test_action",
-                    "parameters": {"key": "val"},
-                    "description": "Do something",
-                },
-            })
-            proposal_id = messages[1].metadata["proposal_id"]
-            with patch("app.chat.queue") as mock_queue:
-                mock_queue.enqueue.return_value = "task-xyz"
-                result = svc.handle_proposal_response(cid, proposal_id, "approve")
-            assert result["type"] == "task"
-            assert result["task_id"] == "task-xyz"
-            payload = mock_queue.enqueue.call_args[0][0]
-            assert payload["type"] == "service.test.action"
-            assert payload["inputs"] == {"key": "val"}
-        finally:
-            ACTION_REGISTRY.pop("test_action", None)
+        cid = svc.create_conversation()
+        messages = svc.receive_structured_reply(cid, {
+            "reply": "Ok.",
+            "proposal": {
+                "action": "test_action",
+                "parameters": {"key": "val"},
+                "description": "Do something",
+            },
+        })
+        proposal_id = messages[1].metadata["proposal_id"]
+        with patch("app.chat.queue") as mock_queue:
+            mock_queue.enqueue.return_value = "task-xyz"
+            result = svc.handle_proposal_response(cid, proposal_id, "approve")
+        assert result["type"] == "task"
+        assert result["task_id"] == "task-xyz"
+        payload = mock_queue.enqueue.call_args[0][0]
+        assert payload["type"] == "service.test.action"
+        assert payload["inputs"] == {"key": "val"}
 
     def test_invalid_option(self, svc):
         cid = svc.create_conversation()
@@ -271,19 +277,22 @@ class TestChatServiceHandleProposalResponse:
 
 
 class TestBuildActionPrompt:
-    def test_empty_when_no_actions(self):
-        from app.chat import _build_action_prompt, ACTION_METADATA
+    @pytest.fixture(autouse=True)
+    def _clean_metadata(self):
+        """Isolate ACTION_METADATA mutations."""
+        from app.chat import ACTION_METADATA
         original = dict(ACTION_METADATA)
         ACTION_METADATA.clear()
-        try:
-            assert _build_action_prompt() == ""
-        finally:
-            ACTION_METADATA.update(original)
+        yield
+        ACTION_METADATA.clear()
+        ACTION_METADATA.update(original)
+
+    def test_empty_when_no_actions(self):
+        from app.chat import _build_action_prompt
+        assert _build_action_prompt() == ""
 
     def test_includes_action_name_and_description(self):
         from app.chat import _build_action_prompt, ACTION_METADATA
-        original = dict(ACTION_METADATA)
-        ACTION_METADATA.clear()
         ACTION_METADATA["service.github.create_issue"] = {
             "description": "Create a GitHub issue",
             "input_schema": {
@@ -294,41 +303,31 @@ class TestBuildActionPrompt:
                 "required": ["repo", "title"],
             },
         }
-        try:
-            result = _build_action_prompt()
-            assert "service.github.create_issue" in result
-            assert "Create a GitHub issue" in result
-            assert "repo" in result
-            assert "(required)" in result
-            assert "title" in result
-            assert "Issue title" in result
-        finally:
-            ACTION_METADATA.clear()
-            ACTION_METADATA.update(original)
+        result = _build_action_prompt()
+        assert "service.github.create_issue" in result
+        assert "Create a GitHub issue" in result
+        assert "repo" in result
+        assert "(required)" in result
+        assert "title" in result
+        assert "Issue title" in result
 
     def test_system_prompt_includes_actions(self, svc):
         from app.chat import ACTION_METADATA
-        original = dict(ACTION_METADATA)
-        ACTION_METADATA.clear()
         ACTION_METADATA["service.test.action"] = {
             "description": "Test action",
             "input_schema": {"properties": {"x": {"type": "string"}}, "required": []},
         }
-        try:
-            cid = svc.create_conversation()
-            with patch("app.chat.config") as mock_config, \
-                 patch("app.chat.queue") as mock_queue:
-                mock_config.chat.system_prompt = "Be helpful."
-                mock_config.chat.llm = "default"
-                mock_queue.enqueue.return_value = "task-1"
-                svc.handle_message(cid, "Hello")
-            payload = mock_queue.enqueue.call_args[0][0]
-            system_msg = payload["messages"][0]["content"]
-            assert "Be helpful." in system_msg
-            assert "service.test.action" in system_msg
-        finally:
-            ACTION_METADATA.clear()
-            ACTION_METADATA.update(original)
+        cid = svc.create_conversation()
+        with patch("app.chat.config") as mock_config, \
+             patch("app.chat.queue") as mock_queue:
+            mock_config.chat.system_prompt = "Be helpful."
+            mock_config.chat.llm = "default"
+            mock_queue.enqueue.return_value = "task-1"
+            svc.handle_message(cid, "Hello")
+        payload = mock_queue.enqueue.call_args[0][0]
+        system_msg = payload["messages"][0]["content"]
+        assert "Be helpful." in system_msg
+        assert "service.test.action" in system_msg
 
 
 class TestBuildLLMMessages:
