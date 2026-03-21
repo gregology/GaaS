@@ -28,8 +28,10 @@ class TestListConversations:
         assert resp.json() == {"conversations": []}
 
     def test_returns_created_conversations(self):
-        client.post("/api/chat/conversations")
-        client.post("/api/chat/conversations")
+        cid1 = client.post("/api/chat/conversations").json()["conversation_id"]
+        cid2 = client.post("/api/chat/conversations").json()["conversation_id"]
+        chat_service._store.append(cid1, "user", "chat", "hello")
+        chat_service._store.append(cid2, "user", "chat", "world")
         resp = client.get("/api/chat/conversations")
         assert resp.status_code == 200
         assert len(resp.json()["conversations"]) == 2
