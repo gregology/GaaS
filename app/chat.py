@@ -12,7 +12,10 @@ import secrets
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime, UTC
+from pathlib import Path
 from typing import Any
+
+from jinja2 import Environment, FileSystemLoader
 
 from app import queue
 from app.config import config, LLMConfig
@@ -340,6 +343,14 @@ class ChatService:
 # System prompt builder
 # ---------------------------------------------------------------------------
 
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_jinja_env = Environment(  # nosec B701 — plaintext templates, not HTML
+    loader=FileSystemLoader(_TEMPLATES_DIR),
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+)
+
 
 def _build_system_prompt() -> str:
     """Build the full system prompt from user config + registered actions."""
@@ -358,55 +369,14 @@ def _build_system_prompt() -> str:
 def _build_action_prompt() -> str:
     """Build an instruction block describing available actions.
 
-    Assembled from ACTION_METADATA, which is populated at startup by
-    integration registration.  Returns empty string if no actions are
-    registered.
+    Rendered from the action_prompt.jinja template, which is populated at
+    startup from ACTION_METADATA (registered by integrations).  Returns
+    empty string if no actions are registered.
     """
     if not ACTION_METADATA:
         return ""
-
-    lines = [
-        "You can propose actions for the user to approve. "
-        "To propose an action, include a proposal field in your response. "
-        "Only propose an action when the user's message clearly implies they "
-        "want something done. For normal conversation, omit the proposal field.",
-        "",
-        "Available actions:",
-    ]
-
-    for action_name, meta in ACTION_METADATA.items():
-        lines.extend(_format_action(action_name, meta))
-
-    return "\n".join(lines)
-
-
-def _format_action(action_name: str, meta: dict[str, Any]) -> list[str]:
-    """Format a single action's description and parameters for the prompt."""
-    lines = [f"\n  {action_name}"]
-    desc = meta.get("description", "")
-    if desc:
-        lines.append(f"    {desc}")
-
-    schema = meta.get("input_schema", {})
-    props = schema.get("properties", {})
-    required = set(schema.get("required", []))
-    if props:
-        lines.append("    Parameters:")
-        for param_name, param_def in props.items():
-            lines.append(_format_param(param_name, param_def, param_name in required))
-
-    return lines
-
-
-def _format_param(name: str, defn: dict[str, Any], required: bool) -> str:
-    """Format a single parameter line."""
-    param_type = defn.get("type", "string")
-    param_desc = defn.get("description", "")
-    req = " (required)" if required else ""
-    line = f"      - {name}: {param_type}{req}"
-    if param_desc:
-        line += f" — {param_desc}"
-    return line
+    template = _jinja_env.get_template("action_prompt.jinja")
+    return template.render(actions=ACTION_METADATA).strip()
 
 
 # ---------------------------------------------------------------------------

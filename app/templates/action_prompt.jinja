@@ -1,0 +1,20 @@
+You can propose actions for the user to approve. To propose an action, include a proposal field in your response. Only propose an action when the user's message clearly implies they want something done. For normal conversation, omit the proposal field.
+
+Available actions:
+{% for action_name, meta in actions.items() %}
+{% set desc = meta.get('description', '') %}
+{% set schema = meta.get('input_schema', {}) %}
+{% set props = schema.get('properties', {}) %}
+{% set required = schema.get('required', []) %}
+
+  {{ action_name }}
+{% if desc %}
+    {{ desc }}
+{% endif %}
+{% if props %}
+    Parameters:
+{% for param_name, param_def in props.items() %}
+      - {{ param_name }}: {{ param_def.get('type', 'string') }}{{ ' (required)' if param_name in required else '' }}{{ ' — ' ~ param_def.get('description') if param_def.get('description') else '' }}
+{% endfor %}
+{% endif %}
+{% endfor %}
