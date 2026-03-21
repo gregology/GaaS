@@ -45,7 +45,7 @@ Three visual entities in the chat: user messages (right-aligned bubbles), assist
 
 The system prompt is built dynamically from `config.chat.system_prompt` plus descriptions of all registered chat actions. Actions are discovered from integration manifests at startup -- any service with a `chat` block is included.
 
-**LLM backend compatibility note:** The structured output schema uses `oneOf: [null, object]` for the proposal field. Some local LLM backends behind OpenAI-compatible APIs don't handle this well. The worker falls back to plain text when the response isn't valid JSON, so proposals silently degrade to "never proposes anything" on those backends. If proposals never appear, check whether the backend supports JSON schema `oneOf` with null types.
+**LLM backend compatibility note:** Structured output is only requested when chat actions are registered. The schema avoids nullable types (`oneOf`, `type: [object, null]`) because llama.cpp and some other local backends can't generate grammars for them. Instead, the `proposal` field is optional — the LLM either includes it or omits it. If proposals never appear despite actions being registered, check whether the backend supports `response_format` with `type: "json_schema"` at all. The worker falls back to plain text on invalid JSON, so chat still works.
 
 ### Dashboard features
 

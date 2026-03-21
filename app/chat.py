@@ -367,9 +367,9 @@ def _build_action_prompt() -> str:
 
     lines = [
         "You can propose actions for the user to approve. "
-        "To propose an action, populate the proposal field in your response. "
+        "To propose an action, include a proposal field in your response. "
         "Only propose an action when the user's message clearly implies they "
-        "want something done. For normal conversation, set proposal to null.",
+        "want something done. For normal conversation, omit the proposal field.",
         "",
         "Available actions:",
     ]
@@ -441,10 +441,10 @@ CHAT_RESPONSE_SCHEMA: dict[str, Any] = {
             "description": "The assistant's conversational reply to the user.",
         },
         "proposal": {
-            "type": ["object", "null"],
+            "type": "object",
             "description": (
                 "If the user is requesting an action that requires confirmation, "
-                "propose it here. Otherwise null."
+                "propose it here. Omit this field for normal conversation."
             ),
             "properties": {
                 "action": {
@@ -466,7 +466,7 @@ CHAT_RESPONSE_SCHEMA: dict[str, Any] = {
             "required": ["action", "parameters", "description"],
         },
     },
-    "required": ["reply", "proposal"],
+    "required": ["reply"],
 }
 
 
