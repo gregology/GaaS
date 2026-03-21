@@ -995,25 +995,35 @@
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/integrations/github.my_repos/issues/run
 </code></pre></div>
 <h3 id="chat">Chat<a class="headerlink" href="#chat" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>POST /api/chat/conversations
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>GET  /api/chat/conversations/{conversation_id}/history
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>POST /api/chat/conversations/{conversation_id}/messages
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>GET  /api/chat/tasks/{task_id}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>GET  /api/chat/conversations
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>POST /api/chat/conversations
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>GET  /api/chat/conversations/{conversation_id}/history
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>POST /api/chat/conversations/{conversation_id}/messages
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>POST /api/chat/conversations/{conversation_id}/proposals/{proposal_id}
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>GET  /api/chat/tasks/{task_id}
 </code></pre></div>
-<p>Conversational chat interface. Create a conversation, send messages, and poll for LLM responses. Messages starting with <code>/</code> are commands (e.g., <code>/clear</code>) handled immediately without the LLM.</p>
-<p>Chat messages are routed through the task queue at priority 1 so the LLM is never overloaded by concurrent requests. The polling endpoint checks the queue directories for task completion.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Create a conversation</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/api/chat/conversations
+<p>Conversational chat interface with persistent conversations and a proposal system. Conversations are stored as JSONL files on disk (configured via <code>directories.chats</code>). Messages starting with <code>/</code> are commands (e.g., <code>/clear</code>) handled immediately without the LLM.</p>
+<p>Chat messages are routed through the task queue at priority 1 so the LLM is never overloaded by concurrent requests. The LLM can propose actions via structured output. Proposals show up as confirmation cards with buttons in the UI. When the user approves, the system enqueues a service task through the normal queue.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># List existing conversations</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>curl<span class="w"> </span>http://localhost:6767/api/chat/conversations
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Send a message</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/api/chat/conversations/<span class="o">{</span>id<span class="o">}</span>/messages<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;: &quot;Hello&quot;}&#39;</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1"># Poll for the response</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>curl<span class="w"> </span>http://localhost:6767/api/chat/tasks/<span class="o">{</span>task_id<span class="o">}</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Create a conversation</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/api/chat/conversations
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Send a message</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/api/chat/conversations/<span class="o">{</span>id<span class="o">}</span>/messages<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;: &quot;Hello&quot;}&#39;</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># Poll for the response (returns a messages list, idempotent)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>curl<span class="w"> </span>http://localhost:6767/api/chat/tasks/<span class="o">{</span>task_id<span class="o">}</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1"># Respond to a proposal</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:6767/api/chat/conversations/<span class="o">{</span>id<span class="o">}</span>/proposals/<span class="o">{</span>proposal_id<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;option&quot;: &quot;approve&quot;}&#39;</span>
 </code></pre></div>
-<p>The web UI at <code>/ui/chat</code> provides a browser-based chat interface that uses these endpoints.</p>
+<p>The web UI at <code>/ui/chat</code> provides a browser-based chat interface that uses these endpoints. It includes a conversation selector for continuing previous chats.</p>
 <h2 id="scheduled-vs-manual-triggers">Scheduled vs manual triggers<a class="headerlink" href="#scheduled-vs-manual-triggers" title="Permanent link">&para;</a></h2>
 <p>No difference in behavior. A manual POST enqueues the same entry tasks that the cron scheduler would. The worker processes both identically, and the downstream task chain (collect, classify, evaluate, act) is the same either way.</p>
 <p>Useful for having an external trigger, testing your config, or debugging an integration outside the normal schedule.</p>

@@ -1052,60 +1052,62 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>tests/
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  conftest.py                           # Shared fixtures
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  test_actions.py                       # Shared action partitioning, input resolution, template rendering
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  test_chat.py                          # ChatService conversation lifecycle and chat_message_handler
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  test_chat_routes.py                   # Chat API endpoint request/response tests
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  test_chat.py                          # ChatService, structured replies, proposals, action prompt builder
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  test_chat_routes.py                   # Chat API endpoints, poll idempotency, proposal responses
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  test_cli.py                           # CLI parser routing, setup wizard, doctor subcommands
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  test_config.py                        # YoloAction tag parsing, ScriptConfig, QueuePolicyConfig models
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  test_llm.py                           # LLM conversation, schema validation, structured output retry
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  test_loader.py                        # Integration discovery, manifest parsing, dynamic model construction
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  test_queue.py                         # Queue lifecycle + stateful property tests
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  test_queue_policy.py                  # Dedup, rate limiting, fingerprint, policy resolution
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  test_result_routes.py                 # Service result routing (note persistence, custom paths, fallbacks)
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  test_scheduler.py                     # interval_to_cron conversion and range validation
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  test_script_execution.py              # Script executor, output capture, input injection, timeout handling
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  test_sdk.py                           # SDK public API imports, ServiceManifest defaults, runtime registration
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  test_services.py                      # Service manifest parsing, handler registration, enqueue with on_result
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  test_store.py                         # NoteStore CRUD + archive
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>  test_supervisor.py                    # Process supervisor lifecycle, sentinel file, restart endpoint
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>  test_ui_presenters.py                 # UI presenters: secret masking, classification/automation formatting
-<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>  test_ui_routes.py                     # Web UI route handlers, secret masking in rendered pages
-<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  test_worker.py                        # Worker dispatch, lifecycle (happy/fail/routing), stale recovery
-<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>  test_yaml_rw.py                       # YAML config round-trip read/write, comment preservation
-<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>  safety/
-<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    test_automation_invariants.py        # Property tests: all possible classifications
-<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    test_chaos.py                        # Chaos tests: garbage LLM output
-<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    test_provenance.py                   # Provenance derivation + safety validation
-<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    test_reference_validation.py         # Script/service reference existence warnings
-<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>
-<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>packages/assistant-email/tests/
-<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>  test_act.py                            # Action execution, allowlist enforcement
-<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>  test_check.py                          # Window parsing, inbox fetch ordering, IMAP criteria
-<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>  test_classify.py                       # Condition matching, operators, schema building
-<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>  test_email_store.py                    # EmailStore message-ID sanitization, dedup across subdirs
-<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>  test_evaluate.py                       # Snapshot construction, resolver patterns, automation evaluation
-<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>  test_mail_parsing.py                   # Header parsing (auth, unsubscribe, dates, calendar)
-<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>
-<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>packages/assistant-gemini/tests/
-<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>  test_client.py                         # GeminiClient two-pass flow (mocked)
-<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>  test_web_research.py                   # Service handler with/without output_schema
-<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>
-<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>packages/assistant-github/tests/
-<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>  test_client.py                         # GitHub API client parsing, search dedup, PR status derivation
-<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>  test_entity_store.py                   # GitHubEntityStore: save, find, find_anywhere, move_to_synced
-<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>  test_evaluate.py                       # PR/Issue snapshot construction, resolver, automation evaluation
-<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>  test_issue_store.py                    # IssueStore save, field mappings, URL generation, defaults
-<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>  test_pr_store.py                       # PullRequestStore save, field mappings, URL generation
-<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>
-<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>packages/assistant-sdk/tests/
-<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>  test_action_partitioning.py            # Action detection, input resolution, script/service partitioning
-<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a>  test_classify.py                       # Schema building (confidence/boolean/enum), Jinja2 environment
-<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>  test_evaluate.py                       # Automation evaluation engine: conditions, operators, dedup
-<a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>  test_manifest.py                       # Manifest dataclasses (Service, Platform, Integration)
-<a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>  test_models.py                         # Pydantic config models: YoloAction, ClassificationConfig
-<a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>  test_note_store.py                     # NoteStore CRUD, archive, directory creation
-<a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a>  test_provenance.py                     # Provenance resolution from condition keys (rule/llm/hybrid)
-<a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a>  test_runtime.py                        # Runtime registration pattern and RuntimeNotRegistered guards
-<a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>  test_task.py                           # TaskPayload and TaskRecord TypedDict smoke tests
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  test_conversation_store.py            # JSONL conversation storage: CRUD, list, find_proposal
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  test_llm.py                           # LLM conversation, schema validation, structured output retry
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  test_loader.py                        # Integration discovery, manifest parsing, dynamic model construction
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  test_queue.py                         # Queue lifecycle + stateful property tests
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  test_queue_policy.py                  # Dedup, rate limiting, fingerprint, policy resolution
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  test_result_routes.py                 # Service result routing (note persistence, custom paths, fallbacks)
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  test_scheduler.py                     # interval_to_cron conversion and range validation
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  test_script_execution.py              # Script executor, output capture, input injection, timeout handling
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  test_sdk.py                           # SDK public API imports, ServiceManifest defaults, runtime registration
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  test_services.py                      # Service manifest parsing, handler registration, enqueue with on_result
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>  test_store.py                         # NoteStore CRUD + archive
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>  test_supervisor.py                    # Process supervisor lifecycle, sentinel file, restart endpoint
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>  test_ui_presenters.py                 # UI presenters: secret masking, classification/automation formatting
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  test_ui_routes.py                     # Web UI route handlers, secret masking in rendered pages
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>  test_worker.py                        # Worker dispatch, lifecycle (happy/fail/routing), stale recovery
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>  test_yaml_rw.py                       # YAML config round-trip read/write, comment preservation
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>  safety/
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    test_automation_invariants.py        # Property tests: all possible classifications
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    test_chaos.py                        # Chaos tests: garbage LLM output
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    test_provenance.py                   # Provenance derivation + safety validation
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    test_reference_validation.py         # Script/service reference existence warnings
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>packages/assistant-email/tests/
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>  test_act.py                            # Action execution, allowlist enforcement
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>  test_check.py                          # Window parsing, inbox fetch ordering, IMAP criteria
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>  test_classify.py                       # Condition matching, operators, schema building
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>  test_email_store.py                    # EmailStore message-ID sanitization, dedup across subdirs
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>  test_evaluate.py                       # Snapshot construction, resolver patterns, automation evaluation
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>  test_mail_parsing.py                   # Header parsing (auth, unsubscribe, dates, calendar)
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>packages/assistant-gemini/tests/
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>  test_client.py                         # GeminiClient two-pass flow (mocked)
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>  test_web_research.py                   # Service handler with/without output_schema
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>packages/assistant-github/tests/
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>  test_client.py                         # GitHub API client parsing, search dedup, PR status derivation, create_issue
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>  test_create_issue.py                   # create_issue service handler: input validation, client dispatch
+<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>  test_entity_store.py                   # GitHubEntityStore: save, find, find_anywhere, move_to_synced
+<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>  test_evaluate.py                       # PR/Issue snapshot construction, resolver, automation evaluation
+<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>  test_issue_store.py                    # IssueStore save, field mappings, URL generation, defaults
+<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>  test_pr_store.py                       # PullRequestStore save, field mappings, URL generation
+<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>
+<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a>packages/assistant-sdk/tests/
+<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>  test_action_partitioning.py            # Action detection, input resolution, script/service partitioning
+<a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>  test_classify.py                       # Schema building (confidence/boolean/enum), Jinja2 environment
+<a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>  test_evaluate.py                       # Automation evaluation engine: conditions, operators, dedup
+<a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>  test_manifest.py                       # Manifest dataclasses (Service, Platform, Integration)
+<a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a>  test_models.py                         # Pydantic config models: YoloAction, ClassificationConfig
+<a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a>  test_note_store.py                     # NoteStore CRUD, archive, directory creation
+<a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>  test_provenance.py                     # Provenance resolution from condition keys (rule/llm/hybrid)
+<a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a>  test_runtime.py                        # Runtime registration pattern and RuntimeNotRegistered guards
+<a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a>  test_task.py                           # TaskPayload and TaskRecord TypedDict smoke tests
 </code></pre></div>
 <p>Package tests import from <code>assistant_sdk.*</code> directly. They run without loading the app config singleton, which means they can be executed in isolation.</p>
 <h2 id="fixtures">Fixtures<a class="headerlink" href="#fixtures" title="Permanent link">&para;</a></h2>
