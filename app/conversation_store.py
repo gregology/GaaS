@@ -100,20 +100,6 @@ class ConversationStore:
             lines = path.read_text().splitlines()
             non_empty = [ln for ln in lines if ln.strip()]
             if not non_empty:
-                conversations.append(
-                    {
-                        "id": cid,
-                        "message_count": 0,
-                        "created_at": datetime.fromtimestamp(
-                            path.stat().st_ctime,
-                            tz=UTC,
-                        ).isoformat(),
-                        "last_activity": datetime.fromtimestamp(
-                            path.stat().st_mtime,
-                            tz=UTC,
-                        ).isoformat(),
-                    }
-                )
                 continue
             first = json.loads(non_empty[0])
             last = json.loads(non_empty[-1])

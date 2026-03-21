@@ -112,11 +112,10 @@ class TestListConversations:
     def test_empty_store(self, store):
         assert store.list_conversations() == []
 
-    def test_empty_conversation_included(self, store):
+    def test_empty_conversation_excluded(self, store):
         store.create()
         result = store.list_conversations()
-        assert len(result) == 1
-        assert result[0]["message_count"] == 0
+        assert len(result) == 0
 
 
 class TestFindProposal:
