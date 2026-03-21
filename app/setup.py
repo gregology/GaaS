@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from jinja2 import Environment, FileSystemLoader
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
@@ -309,73 +311,33 @@ def setup_directories() -> dict[str, str]:
 # ─── Config generation ────────────────────────────────────────────────────────
 
 
-def _emit_yaml_value(lines: list[str], key: str, value: Any, indent: int) -> None:
-    """Emit a single key-value pair with proper YAML formatting."""
+def _yaml_entry(key: str, value: Any, indent: int = 0) -> str:
+    """Render a YAML key-value entry, recursing into dicts.
+
+    Handles !secret references, booleans, and nested dicts.  Registered as
+    a Jinja2 global so templates can call ``{{ yaml_entry(k, v, 4) }}``.
+    """
     prefix = " " * indent
+    if isinstance(value, dict):
+        lines = [f"{prefix}{key}:"]
+        for k, v in value.items():
+            lines.append(_yaml_entry(k, v, indent + 2))
+        return "\n".join(lines)
     if isinstance(value, str) and value.startswith("!secret"):
-        secret_name = value.split(" ", 1)[1]
-        lines.append(f"{prefix}{key}: !secret {secret_name}")
-    elif isinstance(value, dict):
-        lines.append(f"{prefix}{key}:")
-        for k2, v2 in value.items():
-            lines.append(f"{prefix}  {k2}: {v2}")
-    else:
-        lines.append(f"{prefix}{key}: {value}")
+        return f"{prefix}{key}: !secret {value.split(' ', 1)[1]}"
+    if isinstance(value, bool):
+        return f"{prefix}{key}: {'true' if value else 'false'}"
+    return f"{prefix}{key}: {value}"
 
 
-def _emit_llms_section(lines: list[str], llm_config: dict[str, Any]) -> None:
-    """Emit the llms: section of config.yaml."""
-    lines.append("llms:")
-    for profile_name, profile in llm_config.items():
-        lines.append(f"  {profile_name}:")
-        for key, value in profile.items():
-            _emit_yaml_value(lines, key, value, indent=4)
-
-
-def _emit_integration_field(
-    lines: list[str], key: str, value: Any
-) -> None:
-    """Emit a single field of an integration entry."""
-    if key == "type":
-        return
-    if key == "password" and isinstance(value, str) and value.startswith("!secret"):
-        secret_name = value.split(" ", 1)[1]
-        lines.append(f"    {key}: !secret {secret_name}")
-    elif key == "schedule" and isinstance(value, dict):
-        lines.append("    schedule:")
-        for sk, sv in value.items():
-            lines.append(f"      {sk}: {sv}")
-    elif key == "platforms" and isinstance(value, dict):
-        lines.append("    platforms:")
-        for pname, pconfig in value.items():
-            lines.append(f"      {pname}:")
-            _write_platform(lines, pconfig, indent=8)
-    else:
-        lines.append(f"    {key}: {value}")
-
-
-def _emit_integrations_section(
-    lines: list[str], integrations: list[dict[str, Any]]
-) -> None:
-    """Emit the integrations: section of config.yaml."""
-    if not integrations:
-        return
-    lines.append("")
-    lines.append("integrations:")
-    for integration in integrations:
-        lines.append(f"  - type: {integration['type']}")
-        for key, value in integration.items():
-            _emit_integration_field(lines, key, value)
-
-
-def _emit_directories_section(
-    lines: list[str], directories: dict[str, str]
-) -> None:
-    """Emit the directories: section of config.yaml."""
-    lines.append("")
-    lines.append("directories:")
-    for key, path in directories.items():
-        lines.append(f"  {key}: {path}")
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_jinja_env = Environment(
+    loader=FileSystemLoader(_TEMPLATES_DIR),
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+)
+_jinja_env.globals["yaml_entry"] = _yaml_entry
 
 
 def _build_config_yaml(
@@ -383,45 +345,23 @@ def _build_config_yaml(
     integrations: list[dict[str, Any]],
     directories: dict[str, str],
 ) -> str:
-    """Build config.yaml content as a string.
+    """Build config.yaml content from a Jinja2 template.
 
-    We write YAML by hand rather than using a YAML library to preserve
-    the !secret references as literal strings and produce clean, readable output.
+    Uses the yaml_entry() helper for nested dicts and !secret references,
+    producing clean, readable YAML with proper indentation.
     """
-    lines: list[str] = []
-    _emit_llms_section(lines, llm_config)
-    _emit_integrations_section(lines, integrations)
-    _emit_directories_section(lines, directories)
-    lines.append("")
-    return "\n".join(lines)
-
-
-def _write_platform(lines: list[str], config: dict[str, Any], indent: int) -> None:
-    """Recursively write platform config with proper indentation."""
-    prefix = " " * indent
-    for key, value in config.items():
-        if isinstance(value, dict):
-            lines.append(f"{prefix}{key}:")
-            _write_platform(lines, value, indent + 2)
-        elif isinstance(value, int):
-            lines.append(f"{prefix}{key}: {value}")
-        elif isinstance(value, bool):
-            lines.append(f"{prefix}{key}: {'true' if value else 'false'}")
-        else:
-            lines.append(f"{prefix}{key}: {value}")
+    template = _jinja_env.get_template("config.yaml.jinja")
+    return template.render(
+        llm_config=llm_config,
+        integrations=integrations,
+        directories=directories,
+    )
 
 
 def _build_secrets_yaml(secrets: dict[str, str]) -> str:
-    """Build secrets.yaml content."""
-    lines = [
-        "# Assistant secrets — referenced from config.yaml via !secret <key>",
-        "# Keep this file safe. It is gitignored by default.",
-        "",
-    ]
-    for key, value in secrets.items():
-        lines.append(f"{key}: {value}")
-    lines.append("")
-    return "\n".join(lines)
+    """Build secrets.yaml content from a Jinja2 template."""
+    template = _jinja_env.get_template("secrets.yaml.jinja")
+    return template.render(secrets=secrets)
 
 
 def _backup_file(path: Path) -> Path | None:

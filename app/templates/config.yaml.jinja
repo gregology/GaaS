@@ -1,0 +1,22 @@
+llms:
+{% for profile_name, profile in llm_config.items() %}
+  {{ profile_name }}:
+{% for key, value in profile.items() %}
+{{ yaml_entry(key, value, 4) }}
+{% endfor %}
+{% endfor %}
+{% if integrations %}
+
+integrations:
+{% for integration in integrations %}
+  - type: {{ integration['type'] }}
+{% for key, value in integration.items() if key != 'type' %}
+{{ yaml_entry(key, value, 4) }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+directories:
+{% for key, path in directories.items() %}
+  {{ key }}: {{ path }}
+{% endfor %}
