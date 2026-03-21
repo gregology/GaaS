@@ -42,17 +42,22 @@ curl -X POST http://localhost:6767/integrations/github.my_repos/issues/run
 ### Chat
 
 ```
+GET  /api/chat/conversations
 POST /api/chat/conversations
 GET  /api/chat/conversations/{conversation_id}/history
 POST /api/chat/conversations/{conversation_id}/messages
+POST /api/chat/conversations/{conversation_id}/proposals/{proposal_id}
 GET  /api/chat/tasks/{task_id}
 ```
 
-Conversational chat interface. Create a conversation, send messages, and poll for LLM responses. Messages starting with `/` are commands (e.g., `/clear`) handled immediately without the LLM.
+Conversational chat interface with persistent conversations and a proposal system. Conversations are stored as JSONL files on disk (configured via `directories.chats`). Messages starting with `/` are commands (e.g., `/clear`) handled immediately without the LLM.
 
-Chat messages are routed through the task queue at priority 1 so the LLM is never overloaded by concurrent requests. The polling endpoint checks the queue directories for task completion.
+Chat messages are routed through the task queue at priority 1 so the LLM is never overloaded by concurrent requests. The LLM can propose actions via structured output. Proposals show up as confirmation cards with buttons in the UI. When the user approves, the system enqueues a service task through the normal queue.
 
 ```bash
+# List existing conversations
+curl http://localhost:6767/api/chat/conversations
+
 # Create a conversation
 curl -X POST http://localhost:6767/api/chat/conversations
 
@@ -61,11 +66,16 @@ curl -X POST http://localhost:6767/api/chat/conversations/{id}/messages \
   -H 'Content-Type: application/json' \
   -d '{"content": "Hello"}'
 
-# Poll for the response
+# Poll for the response (returns a messages list, idempotent)
 curl http://localhost:6767/api/chat/tasks/{task_id}
+
+# Respond to a proposal
+curl -X POST http://localhost:6767/api/chat/conversations/{id}/proposals/{proposal_id} \
+  -H 'Content-Type: application/json' \
+  -d '{"option": "approve"}'
 ```
 
-The web UI at `/ui/chat` provides a browser-based chat interface that uses these endpoints.
+The web UI at `/ui/chat` provides a browser-based chat interface that uses these endpoints. It includes a conversation selector for continuing previous chats.
 
 ## Scheduled vs manual triggers
 

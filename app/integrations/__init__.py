@@ -81,7 +81,11 @@ def _register_service_handlers(
 def _register_single_service(
     domain: str, module_name: str, service_name: str, service_manifest: object
 ) -> None:
-    """Register a single service handler and its log template if present."""
+    """Register a single service handler and its log template if present.
+
+    If the service has a ``chat`` config, also registers it in the chat
+    action registry so the LLM can propose it during conversations.
+    """
     handler = _load_handler(module_name, service_manifest.handler)  # type: ignore[attr-defined]
     if not handler:
         return
@@ -89,6 +93,19 @@ def _register_single_service(
     HANDLERS[key] = handler
     if service_manifest.human_log:  # type: ignore[attr-defined]
         runtime.set_service_log_template(key, service_manifest.human_log)  # type: ignore[attr-defined]
+
+    chat_config = getattr(service_manifest, "chat", None)
+    if chat_config is not None:
+        from app.chat import ACTION_METADATA, ACTION_OPTIONS, ACTION_REGISTRY
+
+        ACTION_REGISTRY[key] = key  # value is the service task type
+        if chat_config.options:
+            ACTION_OPTIONS[key] = chat_config.options
+        ACTION_METADATA[key] = {
+            "description": chat_config.description,
+            "input_schema": getattr(service_manifest, "input_schema", {}),
+        }
+        log.info("Registered chat action: %s", key)
 
 
 def register_all() -> None:

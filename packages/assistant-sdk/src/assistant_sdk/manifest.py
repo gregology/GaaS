@@ -8,6 +8,14 @@ from typing import Any
 
 
 @dataclass
+class ChatActionConfig:
+    """Configuration for exposing a service as a chat-proposable action."""
+
+    description: str
+    options: list[dict[str, str]] | None = None
+
+
+@dataclass
 class ServiceManifest:
     """Parsed service definition from a manifest.yaml."""
 
@@ -17,6 +25,7 @@ class ServiceManifest:
     reversible: bool = False
     input_schema: dict[str, Any] = field(default_factory=dict)
     human_log: str | None = None
+    chat: ChatActionConfig | None = None
 
 
 @dataclass

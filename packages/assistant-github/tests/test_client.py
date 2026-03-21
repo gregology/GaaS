@@ -219,6 +219,49 @@ class TestGetIssueDetail:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# GitHubClient.create_issue
+# ---------------------------------------------------------------------------
+
+
+class TestCreateIssue:
+    def test_returns_number_and_url(self):
+        client = GitHubClient()
+        with patch.object(client, "_run_gh") as mock:
+            mock.return_value = '{"number": 42, "html_url": "https://github.com/org/repo/issues/42"}'
+            result = client.create_issue("org", "repo", "Bug title", "Bug body")
+        assert result["number"] == 42
+        assert result["url"] == "https://github.com/org/repo/issues/42"
+
+    def test_passes_title_and_body_to_gh(self):
+        client = GitHubClient()
+        with patch.object(client, "_run_gh") as mock:
+            mock.return_value = '{"number": 1, "html_url": ""}'
+            client.create_issue("myorg", "myrepo", "The title", "The body")
+        cmd = mock.call_args[0][0]
+        assert "repos/myorg/myrepo/issues" in cmd[2]
+        assert "-f" in cmd
+        assert "title=The title" in cmd
+        assert "body=The body" in cmd
+
+    def test_empty_body(self):
+        client = GitHubClient()
+        with patch.object(client, "_run_gh") as mock:
+            mock.return_value = '{"number": 1, "html_url": ""}'
+            result = client.create_issue("org", "repo", "Title")
+        assert result["number"] == 1
+        cmd = mock.call_args[0][0]
+        assert "body=" in cmd
+
+    def test_missing_fields_default(self):
+        client = GitHubClient()
+        with patch.object(client, "_run_gh") as mock:
+            mock.return_value = '{}'
+            result = client.create_issue("org", "repo", "T")
+        assert result["number"] is None
+        assert result["url"] == ""
+
+
 class TestScopeQualifiers:
     def test_orgs_only(self):
         client = GitHubClient()

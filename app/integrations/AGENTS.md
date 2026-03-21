@@ -79,6 +79,30 @@ then:
 
 The result is also stored in the completed task YAML in `done/` regardless of routing. Service handlers receive the full task dict from the worker and read inputs from `task["payload"]`, consistent with platform handlers.
 
+**Chat-proposable services**: A service can be exposed to the chat interface by adding a `chat` block to its manifest entry:
+
+```yaml
+services:
+  create_issue:
+    name: "Create Issue"
+    description: "Create an issue in a GitHub repository"
+    handler: ".services.create_issue.handle"
+    input_schema:
+      properties:
+        repo: { type: string, description: "Repository in org/repo format" }
+        title: { type: string, description: "Issue title" }
+      required: [repo, title]
+    chat:
+      description: "Create a GitHub issue"
+      options:
+        - id: approve
+          label: "Post issue"
+        - id: reject
+          label: "Cancel"
+```
+
+During `register_all()`, services with a `chat` block are added to `ACTION_REGISTRY`, `ACTION_OPTIONS`, and `ACTION_METADATA` in `app/chat.py`. The LLM's system prompt is built from `ACTION_METADATA` so it knows what actions it can propose. The `options` field defines the confirmation buttons shown to the user. If omitted, defaults to Approve/Cancel. When the user approves, the system enqueues a normal service task (`service.{domain}.{service_name}`) through the queue.
+
 ### Integration Package Structure
 
 ```

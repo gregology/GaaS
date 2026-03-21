@@ -35,6 +35,9 @@ src/assistant_github/
       const.py
       templates/
         classify.jinja
+  services/
+    __init__.py
+    create_issue.py          # Chat-proposable service: create GitHub issues
 ```
 
 ## Key patterns
@@ -44,6 +47,8 @@ src/assistant_github/
 **GitHubEntityStore**: Base class in `entity_store.py` shared by `PullRequestStore` and `IssueStore`. Provides `find`, `find_anywhere`, `active_keys`, `update`, `move_to_synced`, `restore_to_active` -- all keyed by `(org, repo, number)`. Each subclass overrides only `save()` with entity-specific field mappings.
 
 **Filename convention**: `{org}__{repo}__{number}.md`. Double underscore because org and repo names can contain hyphens.
+
+**Services**: The `create_issue` service is declared in `manifest.yaml` with a `chat` block, which means it's automatically registered as a chat-proposable action at startup. The LLM can propose creating an issue; the user sees a confirmation card and clicks "Post issue" or "Cancel." Approval enqueues a `service.github.create_issue` task through the normal queue. The handler in `services/create_issue.py` calls `GitHubClient.create_issue()`, which hits the GitHub API via `gh api repos/{org}/{repo}/issues --method POST`. Currently uses whatever auth `gh` has configured. Future work: switch to a dedicated GitHub App token so issues appear as the bot, not the logged-in user.
 
 ## Tests
 

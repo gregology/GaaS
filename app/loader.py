@@ -20,6 +20,7 @@ from pathlib import Path
 import yaml
 
 from assistant_sdk.manifest import (
+    ChatActionConfig,
     IntegrationManifest,
     PlatformManifest,
     ServiceManifest,
@@ -175,6 +176,13 @@ def _load_manifest(
     raw_services = raw.get("services", {})
     services: dict[str, ServiceManifest] = {}
     for svc_name, svc_def in raw_services.items():
+        raw_chat = svc_def.get("chat")
+        chat_config: ChatActionConfig | None = None
+        if raw_chat and isinstance(raw_chat, dict):
+            chat_config = ChatActionConfig(
+                description=raw_chat.get("description", svc_def.get("description", "")),
+                options=raw_chat.get("options"),
+            )
         services[svc_name] = ServiceManifest(
             name=svc_def.get("name", svc_name),
             description=svc_def.get("description", ""),
@@ -182,6 +190,7 @@ def _load_manifest(
             reversible=svc_def.get("reversible", False),
             input_schema=svc_def.get("input_schema", {}),
             human_log=svc_def.get("human_log"),
+            chat=chat_config,
         )
 
     manifest_name = str(raw.get("name", domain))
