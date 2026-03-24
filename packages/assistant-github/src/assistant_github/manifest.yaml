@@ -5,6 +5,14 @@ entry_task: check
 dependencies: []
 config_schema:
   properties:
+    github_user:
+      type: string
+    app_id:
+      type: string
+    installation_id:
+      type: string
+    private_key:
+      type: string
     orgs:
       type: array
       items:
@@ -13,7 +21,11 @@ config_schema:
       type: array
       items:
         type: string
-  required: []
+  required:
+    - github_user
+    - app_id
+    - installation_id
+    - private_key
 platforms:
   pull_requests:
     name: "Pull Requests"

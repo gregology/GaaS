@@ -5,6 +5,8 @@ description = "GitHub integration for Assistant"
 requires-python = ">=3.11"
 dependencies = [
     "assistant-sdk>=0.1.0",
+    "PyJWT[crypto]",
+    "httpx",
 ]
 
 [project.entry-points."assistant.integrations"]
