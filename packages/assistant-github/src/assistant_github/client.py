@@ -42,9 +42,7 @@ def _generate_jwt(app_id: str, private_key: str) -> str:
     return jwt.encode(payload, private_key, algorithm="RS256")
 
 
-def _fetch_installation_token(
-    installation_id: str, app_jwt: str
-) -> str:
+def _fetch_installation_token(installation_id: str, app_jwt: str) -> str:
     """Exchange a GitHub App JWT for an installation access token."""
     resp = httpx.post(
         f"{GITHUB_API_BASE}/app/installations/{installation_id}/access_tokens",
@@ -56,7 +54,8 @@ def _fetch_installation_token(
         timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()["token"]
+    token: str = resp.json()["token"]
+    return token
 
 
 class GitHubClient:
@@ -111,12 +110,13 @@ class GitHubClient:
         }
 
     def get_pr_diff(self, org: str, repo: str, number: int) -> str:
-        return self._request(
+        result: str = self._request(
             "GET",
             f"/repos/{org}/{repo}/pulls/{number}",
             headers={"Accept": "application/vnd.github.v3.diff"},
             raw=True,
         )
+        return result
 
     def active_prs(self, integration: Any, platform: Any) -> list[dict[str, Any]]:
         """Fetch all open PRs currently requiring the user's attention."""

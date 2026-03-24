@@ -40,10 +40,10 @@ def handle(task: TaskRecord) -> dict[str, Any]:
     integration = runtime.get_integration(integration_id)
     org, repo_name = parts
     client = GitHubClient(
-        app_id=integration.app_id,
-        installation_id=integration.installation_id,
-        private_key=integration.private_key,
-        github_user=integration.github_user,
+        app_id=integration.app_id,  # type: ignore[attr-defined]
+        installation_id=integration.installation_id,  # type: ignore[attr-defined]
+        private_key=integration.private_key,  # type: ignore[attr-defined]
+        github_user=integration.github_user,  # type: ignore[attr-defined]
     )
     result = client.create_issue(org, repo_name, title, body)
 

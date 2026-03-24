@@ -34,8 +34,10 @@ class TestCreateIssueHandler:
                 "body": "Steps to reproduce",
             }
         )
-        with patch("assistant_github.services.create_issue.runtime") as mock_runtime, \
-             patch("assistant_github.services.create_issue.GitHubClient") as MockClient:
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
             mock_runtime.get_integration.return_value = _mock_integration()
             MockClient.return_value.create_issue.return_value = {
                 "number": 42,
@@ -57,11 +59,11 @@ class TestCreateIssueHandler:
         )
 
     def test_passes_credentials_to_client(self):
-        task = _make_task(
-            {"repo": "org/repo", "title": "Bug", "body": "desc"}
-        )
-        with patch("assistant_github.services.create_issue.runtime") as mock_runtime, \
-             patch("assistant_github.services.create_issue.GitHubClient") as MockClient:
+        task = _make_task({"repo": "org/repo", "title": "Bug", "body": "desc"})
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
             mock_runtime.get_integration.return_value = _mock_integration()
             MockClient.return_value.create_issue.return_value = {
                 "number": 1,
@@ -99,8 +101,10 @@ class TestCreateIssueHandler:
 
     def test_body_defaults_to_empty(self):
         task = _make_task({"repo": "org/repo", "title": "Bug"})
-        with patch("assistant_github.services.create_issue.runtime") as mock_runtime, \
-             patch("assistant_github.services.create_issue.GitHubClient") as MockClient:
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
             mock_runtime.get_integration.return_value = _mock_integration()
             MockClient.return_value.create_issue.return_value = {
                 "number": 1,

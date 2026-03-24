@@ -158,10 +158,7 @@ def check_github_app() -> bool:
             if resp.is_success:
                 _pass(f"GitHub App credentials valid (integration: {ig_name})")
             else:
-                _fail(
-                    f"GitHub App token exchange failed for '{ig_name}': "
-                    f"HTTP {resp.status_code}"
-                )
+                _fail(f"GitHub App token exchange failed for '{ig_name}': HTTP {resp.status_code}")
                 return False
         except Exception as e:
             _fail(f"GitHub App credential check failed for '{ig_name}': {e}")

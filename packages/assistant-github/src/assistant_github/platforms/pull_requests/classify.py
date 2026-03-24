@@ -85,10 +85,10 @@ def handle(task: TaskRecord) -> None:
         )
     else:
         client = GitHubClient(
-            app_id=integration.app_id,
-            installation_id=integration.installation_id,
-            private_key=integration.private_key,
-            github_user=integration.github_user,
+            app_id=integration.app_id,  # type: ignore[attr-defined]
+            installation_id=integration.installation_id,  # type: ignore[attr-defined]
+            private_key=integration.private_key,  # type: ignore[attr-defined]
+            github_user=integration.github_user,  # type: ignore[attr-defined]
         )
         detail = client.get_pr_detail(org, repo, number)
         diff = client.get_pr_diff(org, repo, number)

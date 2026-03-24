@@ -14,8 +14,10 @@ from assistant_github.client import GitHubClient, _parse_search_item
 
 def _make_client(**overrides):
     """Create a GitHubClient with mocked auth so no real HTTP calls are made."""
-    with patch("assistant_github.client._generate_jwt", return_value="fake-jwt"), \
-         patch("assistant_github.client._fetch_installation_token", return_value="fake-token"):
+    with (
+        patch("assistant_github.client._generate_jwt", return_value="fake-jwt"),
+        patch("assistant_github.client._fetch_installation_token", return_value="fake-token"),
+    ):
         return GitHubClient(
             app_id=overrides.get("app_id", "123"),
             installation_id=overrides.get("installation_id", "456"),
@@ -494,7 +496,6 @@ class TestRequestRetry:
     def test_retries_on_failure_then_succeeds(self):
         client = _make_client()
         call_count = [0]
-        original_request = client._http.request
 
         def fake_request(method, url, **kwargs):
             call_count[0] += 1
@@ -508,8 +509,10 @@ class TestRequestRetry:
                 resp.json.return_value = {"ok": True}
             return resp
 
-        with patch.object(client._http, "request", side_effect=fake_request), \
-             patch("assistant_github.client.time.sleep"):
+        with (
+            patch.object(client._http, "request", side_effect=fake_request),
+            patch("assistant_github.client.time.sleep"),
+        ):
             result = client._request("GET", "/test")
         assert result == {"ok": True}
         assert call_count[0] == 3
@@ -524,7 +527,9 @@ class TestRequestRetry:
             resp.text = "bad gateway"
             return resp
 
-        with patch.object(client._http, "request", side_effect=always_fail), \
-             patch("assistant_github.client.time.sleep"), \
-             pytest.raises(RuntimeError, match="GitHub API failed"):
+        with (
+            patch.object(client._http, "request", side_effect=always_fail),
+            patch("assistant_github.client.time.sleep"),
+            pytest.raises(RuntimeError, match="GitHub API failed"),
+        ):
             client._request("GET", "/test")
