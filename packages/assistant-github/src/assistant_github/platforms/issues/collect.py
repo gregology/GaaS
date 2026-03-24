@@ -20,7 +20,12 @@ def handle(task: TaskRecord) -> None:
     number = task["payload"]["number"]
     log.info("github.issues.collect: %s/%s#%d (integration=%s)", org, repo, number, integration_id)
 
-    client = GitHubClient()
+    client = GitHubClient(
+        app_id=integration.app_id,
+        installation_id=integration.installation_id,
+        private_key=integration.private_key,
+        github_user=integration.github_user,
+    )
     issue = client.get_issue(org, repo, number)
     detail = client.get_issue_detail(org, repo, number)
 

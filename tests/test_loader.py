@@ -281,6 +281,10 @@ class TestBuildIntegrationUnion:
         instance = Model(
             type="github",
             name="my_repos",
+            github_user="testuser",
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
             orgs=["myorg"],
         )
         assert instance.orgs == ["myorg"]
@@ -293,6 +297,10 @@ class TestBuildIntegrationUnion:
         instance = Model(
             type="github",
             name="my_repos",
+            github_user="testuser",
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
             platforms={"pull_requests": {"include_mentions": True}},
         )
         assert instance.platforms.pull_requests.include_mentions is True

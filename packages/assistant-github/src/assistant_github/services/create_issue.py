@@ -1,10 +1,11 @@
-"""Service handler for creating GitHub issues via the gh CLI."""
+"""Service handler for creating GitHub issues."""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
+from assistant_sdk import runtime
 from assistant_sdk.task import TaskRecord
 
 from assistant_github.client import GitHubClient
@@ -16,6 +17,7 @@ def handle(task: TaskRecord) -> dict[str, Any]:
     """Handle a service.github.create_issue queue task.
 
     Payload fields:
+        integration: str — integration ID (e.g. "github.my_repos")
         inputs:
             repo: str   — repository in "org/repo" format
             title: str  — issue title
@@ -34,8 +36,15 @@ def handle(task: TaskRecord) -> dict[str, Any]:
     if len(parts) != 2:
         return {"text": f"Invalid repo format: {repo}. Expected org/repo."}
 
+    integration_id = task["payload"]["integration"]
+    integration = runtime.get_integration(integration_id)
     org, repo_name = parts
-    client = GitHubClient()
+    client = GitHubClient(
+        app_id=integration.app_id,
+        installation_id=integration.installation_id,
+        private_key=integration.private_key,
+        github_user=integration.github_user,
+    )
     result = client.create_issue(org, repo_name, title, body)
 
     url = result.get("url", "")

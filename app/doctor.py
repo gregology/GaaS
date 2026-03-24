@@ -108,24 +108,66 @@ def check_git() -> bool:
     return True
 
 
-def check_gh() -> tuple[bool, bool]:
-    """Check GitHub CLI. Returns (installed, authenticated)."""
-    gh = shutil.which("gh")
-    if not gh:
-        _warn("GitHub CLI not found (optional, needed for GitHub integration)")
-        return False, False
+def check_github_app() -> bool:
+    """Check GitHub App credentials can produce an installation token."""
+    config_path = PROJECT_ROOT / "config.yaml"
+    if not config_path.exists():
+        return True  # No config yet, skip
 
-    _pass("GitHub CLI found")
+    try:
+        raw = _load_config_yaml()
+    except Exception:
+        _warn("Could not check GitHub App credentials (config parse error)")
+        return False
 
-    result = subprocess.run(  # nosec B603
-        [gh, "auth", "status"], capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        _pass("GitHub CLI authenticated")
-        return True, True
-    else:
-        _warn("GitHub CLI not authenticated (run: gh auth login)")
-        return True, False
+    if not raw:
+        return True
+
+    integrations = raw.get("integrations", [])
+    github_integrations = [i for i in integrations if i.get("type") == "github"]
+    if not github_integrations:
+        _warn("No GitHub integrations configured (optional)")
+        return True
+
+    for ig in github_integrations:
+        ig_name = ig.get("name", "unknown")
+        app_id = ig.get("app_id", "")
+        installation_id = ig.get("installation_id", "")
+        private_key = ig.get("private_key", "")
+
+        if not all([app_id, installation_id, private_key]):
+            _fail(f"GitHub integration '{ig_name}': missing app credentials")
+            return False
+
+        try:
+            import httpx
+            import jwt
+
+            now = int(__import__("time").time())
+            payload = {"iss": str(app_id), "iat": now - 60, "exp": now + 600}
+            app_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+            resp = httpx.post(
+                f"https://api.github.com/app/installations/{installation_id}/access_tokens",
+                headers={
+                    "Authorization": f"Bearer {app_jwt}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                timeout=10,
+            )
+            if resp.is_success:
+                _pass(f"GitHub App credentials valid (integration: {ig_name})")
+            else:
+                _fail(
+                    f"GitHub App token exchange failed for '{ig_name}': "
+                    f"HTTP {resp.status_code}"
+                )
+                return False
+        except Exception as e:
+            _fail(f"GitHub App credential check failed for '{ig_name}': {e}")
+            return False
+
+    return True
 
 
 def _load_config_yaml() -> dict[str, Any] | None:
@@ -376,8 +418,7 @@ def run_doctor() -> int:
         failures += 1
     if not check_git():
         failures += 1
-    gh_installed, _gh_authed = check_gh()
-    if not gh_installed:
+    if not check_github_app():
         warnings += 1
 
     # Configuration

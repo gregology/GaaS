@@ -18,7 +18,12 @@ def handle(task: TaskRecord) -> None:
     platform = runtime.get_platform(integration_id, "issues")
     log.info("github.issues.check: starting (integration=%s)", integration_id)
 
-    client = GitHubClient()
+    client = GitHubClient(
+        app_id=integration.app_id,
+        installation_id=integration.installation_id,
+        private_key=integration.private_key,
+        github_user=integration.github_user,
+    )
     store = IssueStore(path=runtime.get_notes_dir() / "github" / "issues" / integration.name)
 
     # Fetch all issues currently requiring attention from GitHub.

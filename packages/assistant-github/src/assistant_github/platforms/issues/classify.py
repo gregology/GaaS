@@ -74,7 +74,12 @@ def handle(task: TaskRecord) -> None:
             number,
         )
     else:
-        client = GitHubClient()
+        client = GitHubClient(
+            app_id=integration.app_id,
+            installation_id=integration.installation_id,
+            private_key=integration.private_key,
+            github_user=integration.github_user,
+        )
         detail = client.get_issue_detail(org, repo, number)
 
         prompt = _render_prompt(detail, classifications)
