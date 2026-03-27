@@ -16,7 +16,7 @@ BACKOFF_BASE = 1  # seconds; sleeps 1, 2, 4 on retries
 GITHUB_API_BASE = "https://api.github.com"
 
 
-def normalize_repo_entry(entry: str | dict) -> dict:
+def normalize_repo_entry(entry: str | dict[str, str]) -> dict[str, str]:
     """Normalize a repo config entry to {"repo": ..., "context": ...}.
 
     Accepts either a plain string ("org/repo") or a dict with required

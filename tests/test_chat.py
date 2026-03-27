@@ -353,8 +353,14 @@ class TestBuildActionPrompt:
                 "required": ["repo", "title"],
             },
             "repo_context": [
-                {"repo": "myorg/backend", "context": "Python API server. Include endpoint and error details."},
-                {"repo": "myorg/frontend", "context": "React SPA. Include browser and component info."},
+                {
+                    "repo": "myorg/backend",
+                    "context": "Python API server. Include endpoint and error details.",
+                },
+                {
+                    "repo": "myorg/frontend",
+                    "context": "React SPA. Include browser and component info.",
+                },
             ],
         }
         result = _build_action_prompt()

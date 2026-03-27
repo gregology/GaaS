@@ -129,14 +129,14 @@ def _register_single_service(
         log.info("Registered chat action: %s", key)
 
 
-def _normalize_repo_entry(entry: str | dict) -> dict:
+def _normalize_repo_entry(entry: str | dict[str, str]) -> dict[str, str]:
     """Normalize a repo config entry to {"repo": ..., "context": ...}."""
     if isinstance(entry, str):
         return {"repo": entry, "context": ""}
     return {"repo": entry["repo"], "context": entry.get("context", "")}
 
 
-def _collect_repo_context(instances: list) -> list[dict[str, str]]:
+def _collect_repo_context(instances: list[object]) -> list[dict[str, str]]:
     """Collect repo entries with non-empty context from integration instances."""
     context_entries = []
     for instance in instances:

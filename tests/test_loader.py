@@ -232,9 +232,8 @@ class TestBuildIntegrationModel:
         assert instance.llm == "fast"
         assert instance.schedule is None
 
-
     def test_oneof_array_items_accepts_mixed_types(self, tmp_path):
-        """A manifest with oneOf array items should produce a model that accepts both strings and dicts."""
+        """Manifest with oneOf array items accepts both strings and dicts."""
         integration_dir = tmp_path / "mixed_list"
         integration_dir.mkdir()
 
