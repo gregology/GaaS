@@ -17,4 +17,10 @@ Available actions:
       - {{ param_name }}: {{ param_def.get('type', 'string') }}{{ ' (required)' if param_name in required else '' }}{{ ' — ' ~ param_def.get('description') if param_def.get('description') else '' }}
 {% endfor %}
 {% endif %}
+{% if meta.get('repo_context') %}
+    Available repositories:
+{% for rc in meta.get('repo_context') %}
+      - {{ rc.repo }}: {{ rc.context }}
+{% endfor %}
+{% endif %}
 {% endfor %}

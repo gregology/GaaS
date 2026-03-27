@@ -120,7 +120,31 @@ def _register_single_service(
             "description": chat_config.description,
             "input_schema": getattr(service_manifest, "input_schema", {}),
         }
+
+        # Inject repo context from integration config, if available.
+        repo_context = _collect_repo_context(instances)
+        if repo_context:
+            ACTION_METADATA[key]["repo_context"] = repo_context
+
         log.info("Registered chat action: %s", key)
+
+
+def _normalize_repo_entry(entry: str | dict) -> dict:
+    """Normalize a repo config entry to {"repo": ..., "context": ...}."""
+    if isinstance(entry, str):
+        return {"repo": entry, "context": ""}
+    return {"repo": entry["repo"], "context": entry.get("context", "")}
+
+
+def _collect_repo_context(instances: list) -> list[dict[str, str]]:
+    """Collect repo entries with non-empty context from integration instances."""
+    context_entries = []
+    for instance in instances:
+        for entry in getattr(instance, "repos", None) or []:
+            normalized = _normalize_repo_entry(entry)
+            if normalized["context"]:
+                context_entries.append(normalized)
+    return context_entries
 
 
 def register_all() -> None:
