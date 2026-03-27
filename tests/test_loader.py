@@ -233,6 +233,99 @@ class TestBuildIntegrationModel:
         assert instance.schedule is None
 
 
+    def test_oneof_array_items_accepts_mixed_types(self, tmp_path):
+        """A manifest with oneOf array items should produce a model that accepts both strings and dicts."""
+        integration_dir = tmp_path / "mixed_list"
+        integration_dir.mkdir()
+
+        manifest_data = {
+            "domain": "mixed_list",
+            "name": "Mixed List",
+            "version": "1.0.0",
+            "entry_task": "check",
+            "dependencies": [],
+            "config_schema": {
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "value": {"type": "string"},
+                                    },
+                                    "required": ["name"],
+                                },
+                            ],
+                        },
+                    },
+                },
+                "required": [],
+            },
+        }
+        (integration_dir / "manifest.yaml").write_text(yaml.dump(manifest_data))
+        (integration_dir / "__init__.py").write_text("HANDLERS = {'check': lambda task: None}\n")
+
+        manifest = _load_manifest(integration_dir, builtin=False)
+        Model = build_integration_model(manifest)
+
+        # Should accept string entries
+        instance = Model(type="mixed_list", name="test", items=["foo", "bar"])
+        assert instance.items == ["foo", "bar"]
+
+        # Should accept dict entries
+        instance = Model(type="mixed_list", name="test", items=[{"name": "a", "value": "b"}])
+        assert instance.items == [{"name": "a", "value": "b"}]
+
+        # Should accept mixed entries
+        instance = Model(type="mixed_list", name="test", items=["foo", {"name": "a"}])
+        assert instance.items == ["foo", {"name": "a"}]
+
+    def test_github_repos_accepts_mixed_entries(self, builtin_dir):
+        """The GitHub model should accept both string and dict repo entries."""
+        manifests = discover_integrations(builtin_dir)
+        Model = build_integration_model(manifests["github"])
+
+        # String-only repos (backward compat)
+        instance = Model(
+            type="github",
+            name="test",
+            github_user="testuser",
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
+            repos=["myorg/backend"],
+        )
+        assert instance.repos == ["myorg/backend"]
+
+        # Object-form repos
+        instance = Model(
+            type="github",
+            name="test",
+            github_user="testuser",
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
+            repos=[{"repo": "myorg/backend", "context": "Python API"}],
+        )
+        assert instance.repos == [{"repo": "myorg/backend", "context": "Python API"}]
+
+        # Mixed
+        instance = Model(
+            type="github",
+            name="test",
+            github_user="testuser",
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
+            repos=["myorg/frontend", {"repo": "myorg/backend", "context": "API"}],
+        )
+        assert len(instance.repos) == 2
+
+
 class TestBuildIntegrationUnion:
     def test_union_with_multiple_manifests(self, builtin_dir):
         manifests = discover_integrations(builtin_dir)

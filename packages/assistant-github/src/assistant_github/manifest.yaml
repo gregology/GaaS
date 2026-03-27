@@ -21,7 +21,16 @@ config_schema:
     repos:
       type: array
       items:
-        type: string
+        oneOf:
+          - type: string
+          - type: object
+            properties:
+              repo:
+                type: string
+              context:
+                type: string
+            required:
+              - repo
   required:
     - github_user
     - app_id

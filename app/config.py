@@ -166,9 +166,13 @@ def _json_schema_to_field(
 
     python_type: Any
     if json_type == "array":
-        item_type_str = prop_def.get("items", {}).get("type", "string")
-        item_type = _JSON_TYPE_MAP.get(item_type_str, str)
-        python_type = list[item_type]  # type: ignore[valid-type]
+        items_def = prop_def.get("items", {})
+        if "oneOf" in items_def or "anyOf" in items_def:
+            python_type = list
+        else:
+            item_type_str = items_def.get("type", "string")
+            item_type = _JSON_TYPE_MAP.get(item_type_str, str)
+            python_type = list[item_type]  # type: ignore[valid-type]
     else:
         python_type = _JSON_TYPE_MAP.get(json_type, str)
 
