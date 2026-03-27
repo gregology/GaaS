@@ -106,7 +106,8 @@ def _register_single_service(
             log.warning(
                 "Chat action %s: multiple %s instances configured; "
                 "integration must be resolved at invocation time",
-                key, domain,
+                key,
+                domain,
             )
 
         ACTION_REGISTRY[key] = {
