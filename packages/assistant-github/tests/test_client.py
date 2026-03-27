@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import jwt
 import pytest
 
-from assistant_github.client import GitHubClient, _parse_search_item
+from assistant_github.client import GitHubClient, _parse_search_item, normalize_repo_entry
 
 
 def _make_client(**overrides):
@@ -346,6 +346,44 @@ class TestScopeQualifiers:
         integration.repos = []
         qualifiers = client._scope_qualifiers(integration)
         assert qualifiers == [""]
+
+    def test_dict_form_repos(self):
+        client = _make_client()
+        integration = MagicMock()
+        integration.orgs = None
+        integration.repos = [{"repo": "myorg/myrepo", "context": "Python API"}]
+        qualifiers = client._scope_qualifiers(integration)
+        assert qualifiers == ["repo:myorg/myrepo"]
+
+    def test_mixed_string_and_dict_repos(self):
+        client = _make_client()
+        integration = MagicMock()
+        integration.orgs = None
+        integration.repos = [
+            "myorg/frontend",
+            {"repo": "myorg/backend", "context": "API server"},
+        ]
+        qualifiers = client._scope_qualifiers(integration)
+        assert qualifiers == ["repo:myorg/frontend", "repo:myorg/backend"]
+
+
+# ---------------------------------------------------------------------------
+# normalize_repo_entry
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeRepoEntry:
+    def test_string_entry(self):
+        result = normalize_repo_entry("myorg/myrepo")
+        assert result == {"repo": "myorg/myrepo", "context": ""}
+
+    def test_dict_entry_with_context(self):
+        result = normalize_repo_entry({"repo": "myorg/myrepo", "context": "Python API"})
+        assert result == {"repo": "myorg/myrepo", "context": "Python API"}
+
+    def test_dict_entry_without_context(self):
+        result = normalize_repo_entry({"repo": "myorg/myrepo"})
+        assert result == {"repo": "myorg/myrepo", "context": ""}
 
 
 # ---------------------------------------------------------------------------

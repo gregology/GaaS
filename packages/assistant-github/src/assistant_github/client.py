@@ -16,6 +16,17 @@ BACKOFF_BASE = 1  # seconds; sleeps 1, 2, 4 on retries
 GITHUB_API_BASE = "https://api.github.com"
 
 
+def normalize_repo_entry(entry: str | dict[str, str]) -> dict[str, str]:
+    """Normalize a repo config entry to {"repo": ..., "context": ...}.
+
+    Accepts either a plain string ("org/repo") or a dict with required
+    "repo" key and optional "context" key.
+    """
+    if isinstance(entry, str):
+        return {"repo": entry, "context": ""}
+    return {"repo": entry["repo"], "context": entry.get("context", "")}
+
+
 def _parse_search_item(item: dict[str, Any]) -> dict[str, Any]:
     """Parse an item from the GitHub search/issues endpoint into a standard dict."""
     repo_url = item.get("repository_url", "")
@@ -252,8 +263,9 @@ class GitHubClient:
         qualifiers = []
         for org in integration.orgs or []:
             qualifiers.append(f"org:{org}")
-        for repo in integration.repos or []:
-            qualifiers.append(f"repo:{repo}")
+        for entry in integration.repos or []:
+            normalized = normalize_repo_entry(entry)
+            qualifiers.append(f"repo:{normalized['repo']}")
         return qualifiers or [""]
 
     def _request(

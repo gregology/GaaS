@@ -183,6 +183,7 @@ def _load_manifest(
             chat_config = ChatActionConfig(
                 description=raw_chat.get("description", svc_def.get("description", "")),
                 options=raw_chat.get("options"),
+                context_builder=raw_chat.get("context_builder"),
             )
         services[svc_name] = ServiceManifest(
             name=svc_def.get("name", svc_name),

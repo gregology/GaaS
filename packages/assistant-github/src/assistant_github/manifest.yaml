@@ -21,7 +21,16 @@ config_schema:
     repos:
       type: array
       items:
-        type: string
+        oneOf:
+          - type: string
+          - type: object
+            properties:
+              repo:
+                type: string
+              context:
+                type: string
+            required:
+              - repo
   required:
     - github_user
     - app_id
@@ -72,6 +81,7 @@ services:
       required: [repo, title]
     chat:
       description: "Create a GitHub issue"
+      context_builder: ".services.create_issue.build_chat_context"
       options:
         - id: approve
           label: "Post issue"

@@ -74,6 +74,12 @@ integrations:
     llm: default
     # orgs: [myorg]                  # Restrict to specific orgs
     # repos: [myorg/myrepo]          # Restrict to specific repos (org/repo format)
+    # repos:                         # Or use object form to add context for the LLM:
+    #   - repo: myorg/backend
+    #     context: "Python API server. Issues should include endpoint and error details."
+    #   - repo: myorg/frontend
+    #     context: "React SPA. Include browser and component info in issues."
+    #   - myorg/docs              # Plain strings still work alongside object entries
     platforms:
       pull_requests:
         include_mentions: true

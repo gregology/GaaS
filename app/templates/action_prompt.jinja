@@ -17,4 +17,10 @@ Available actions:
       - {{ param_name }}: {{ param_def.get('type', 'string') }}{{ ' (required)' if param_name in required else '' }}{{ ' — ' ~ param_def.get('description') if param_def.get('description') else '' }}
 {% endfor %}
 {% endif %}
+{% if meta.get('chat_context') %}
+    Context:
+{% for ctx in meta.get('chat_context') %}
+      - {{ ctx.label }}: {{ ctx.description }}
+{% endfor %}
+{% endif %}
 {% endfor %}

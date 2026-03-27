@@ -120,7 +120,28 @@ def _register_single_service(
             "description": chat_config.description,
             "input_schema": getattr(service_manifest, "input_schema", {}),
         }
+
+        _inject_chat_context(ACTION_METADATA[key], module_name, chat_config, instances)
+
         log.info("Registered chat action: %s", key)
+
+
+def _inject_chat_context(
+    metadata: dict[str, object],
+    module_name: str,
+    chat_config: object,
+    instances: list[object],
+) -> None:
+    """Load and invoke the context_builder declared in a chat config, if any."""
+    builder_path = getattr(chat_config, "context_builder", None)
+    if not builder_path:
+        return
+    builder = _load_handler(module_name, builder_path)
+    if not builder:
+        return
+    chat_context = builder(instances)  # type: ignore[arg-type]
+    if chat_context:
+        metadata["chat_context"] = chat_context
 
 
 def register_all() -> None:

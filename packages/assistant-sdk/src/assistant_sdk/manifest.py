@@ -13,6 +13,7 @@ class ChatActionConfig:
 
     description: str
     options: list[dict[str, str]] | None = None
+    context_builder: str | None = None
 
 
 @dataclass
