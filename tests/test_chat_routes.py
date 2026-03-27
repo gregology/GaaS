@@ -287,7 +287,10 @@ class TestRespondToProposal:
     def test_approve_registered_action_returns_task_id(self, queue_dir):
         from app.chat import ACTION_REGISTRY
 
-        ACTION_REGISTRY["test_action"] = "service.test.action"
+        ACTION_REGISTRY["test_action"] = {
+            "task_type": "service.test.action",
+            "payload_defaults": {"integration": "test.default"},
+        }
         try:
             cid = chat_service.create_conversation()
             messages = chat_service.receive_structured_reply(

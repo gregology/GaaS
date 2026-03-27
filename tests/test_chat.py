@@ -248,7 +248,10 @@ class TestChatServiceHandleProposalResponse:
     def test_approve_registered_action_enqueues(self, svc):
         from app.chat import ACTION_REGISTRY
 
-        ACTION_REGISTRY["test_action"] = "service.test.action"
+        ACTION_REGISTRY["test_action"] = {
+            "task_type": "service.test.action",
+            "payload_defaults": {"integration": "test.default"},
+        }
         cid = svc.create_conversation()
         messages = svc.receive_structured_reply(
             cid,
@@ -269,6 +272,7 @@ class TestChatServiceHandleProposalResponse:
         assert result["task_id"] == "task-xyz"
         payload = mock_queue.enqueue.call_args[0][0]
         assert payload["type"] == "service.test.action"
+        assert payload["integration"] == "test.default"
         assert payload["inputs"] == {"key": "val"}
 
     def test_invalid_option(self, svc):

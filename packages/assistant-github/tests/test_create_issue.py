@@ -1,6 +1,6 @@
 """Tests for the create_issue service handler."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from assistant_github.services.create_issue import handle
 
@@ -10,9 +10,19 @@ def _make_task(inputs: dict) -> dict:
         "id": "1_20260320T100000Z_abc--def--service.github.create_issue",
         "payload": {
             "type": "service.github.create_issue",
+            "integration": "github.my_repos",
             "inputs": inputs,
         },
     }
+
+
+def _mock_integration():
+    ig = MagicMock()
+    ig.app_id = "123"
+    ig.installation_id = "456"
+    ig.private_key = "fake-key"
+    ig.github_user = "testuser"
+    return ig
 
 
 class TestCreateIssueHandler:
@@ -24,7 +34,11 @@ class TestCreateIssueHandler:
                 "body": "Steps to reproduce",
             }
         )
-        with patch("assistant_github.services.create_issue.GitHubClient") as MockClient:
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
+            mock_runtime.get_integration.return_value = _mock_integration()
             MockClient.return_value.create_issue.return_value = {
                 "number": 42,
                 "url": "https://github.com/myorg/myrepo/issues/42",
@@ -42,6 +56,27 @@ class TestCreateIssueHandler:
             "myrepo",
             "Bug report",
             "Steps to reproduce",
+        )
+
+    def test_passes_credentials_to_client(self):
+        task = _make_task({"repo": "org/repo", "title": "Bug", "body": "desc"})
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
+            mock_runtime.get_integration.return_value = _mock_integration()
+            MockClient.return_value.create_issue.return_value = {
+                "number": 1,
+                "url": "",
+            }
+            handle(task)
+
+        mock_runtime.get_integration.assert_called_once_with("github.my_repos")
+        MockClient.assert_called_once_with(
+            app_id="123",
+            installation_id="456",
+            private_key="fake-key",
+            github_user="testuser",
         )
 
     def test_missing_repo(self):
@@ -66,7 +101,11 @@ class TestCreateIssueHandler:
 
     def test_body_defaults_to_empty(self):
         task = _make_task({"repo": "org/repo", "title": "Bug"})
-        with patch("assistant_github.services.create_issue.GitHubClient") as MockClient:
+        with (
+            patch("assistant_github.services.create_issue.runtime") as mock_runtime,
+            patch("assistant_github.services.create_issue.GitHubClient") as MockClient,
+        ):
+            mock_runtime.get_integration.return_value = _mock_integration()
             MockClient.return_value.create_issue.return_value = {
                 "number": 1,
                 "url": "",

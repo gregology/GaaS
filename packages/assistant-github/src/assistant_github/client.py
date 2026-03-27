@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-import json
 import logging
-import subprocess
 import time
 from collections.abc import Callable
 from typing import Any
+
+import httpx
+import jwt
 
 log = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 BACKOFF_BASE = 1  # seconds; sleeps 1, 2, 4 on retries
+
+GITHUB_API_BASE = "https://api.github.com"
 
 
 def _parse_search_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -28,9 +31,56 @@ def _parse_search_item(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _generate_jwt(app_id: str, private_key: str) -> str:
+    """Create a short-lived JWT for GitHub App authentication."""
+    now = int(time.time())
+    payload = {
+        "iss": app_id,
+        "iat": now - 60,
+        "exp": now + 600,
+    }
+    return jwt.encode(payload, private_key, algorithm="RS256")
+
+
+def _fetch_installation_token(installation_id: str, app_jwt: str) -> str:
+    """Exchange a GitHub App JWT for an installation access token."""
+    resp = httpx.post(
+        f"{GITHUB_API_BASE}/app/installations/{installation_id}/access_tokens",
+        headers={
+            "Authorization": f"Bearer {app_jwt}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    token: str = resp.json()["token"]
+    return token
+
+
 class GitHubClient:
+    def __init__(
+        self,
+        app_id: str,
+        installation_id: str,
+        private_key: str,
+        github_user: str,
+    ) -> None:
+        self._github_user = github_user
+        app_jwt = _generate_jwt(app_id, private_key)
+        token = _fetch_installation_token(installation_id, app_jwt)
+        self._http = httpx.Client(
+            base_url=GITHUB_API_BASE,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            timeout=30,
+        )
+
     def get_pr(self, org: str, repo: str, number: int) -> dict[str, Any]:
-        result = self._gh_api(f"repos/{org}/{repo}/pulls/{number}")
+        result = self._request("GET", f"/repos/{org}/{repo}/pulls/{number}")
         merged = result.get("merged", False)
         state = result.get("state", "unknown")
         if merged:
@@ -49,7 +99,7 @@ class GitHubClient:
         }
 
     def get_pr_detail(self, org: str, repo: str, number: int) -> dict[str, Any]:
-        result = self._gh_api(f"repos/{org}/{repo}/pulls/{number}")
+        result = self._request("GET", f"/repos/{org}/{repo}/pulls/{number}")
         return {
             "title": result.get("title", ""),
             "body": result.get("body", "") or "",
@@ -60,26 +110,24 @@ class GitHubClient:
         }
 
     def get_pr_diff(self, org: str, repo: str, number: int) -> str:
-        cmd = [
-            "gh",
-            "api",
-            f"repos/{org}/{repo}/pulls/{number}",
-            "--method",
+        result: str = self._request(
             "GET",
-            "-H",
-            "Accept: application/vnd.github.v3.diff",
-        ]
-        return self._run_gh(cmd, timeout=60)
+            f"/repos/{org}/{repo}/pulls/{number}",
+            headers={"Accept": "application/vnd.github.v3.diff"},
+            raw=True,
+        )
+        return result
 
     def active_prs(self, integration: Any, platform: Any) -> list[dict[str, Any]]:
         """Fetch all open PRs currently requiring the user's attention."""
+        user = self._github_user
         base_queries = [
-            "is:pr is:open assignee:@me",
-            "is:pr is:open review-requested:@me",
-            "is:pr is:open author:@me draft:false",
+            f"is:pr is:open assignee:{user}",
+            f"is:pr is:open review-requested:{user}",
+            f"is:pr is:open author:{user} draft:false",
         ]
         if getattr(platform, "include_mentions", False):
-            base_queries.append("is:pr is:open mentions:@me")
+            base_queries.append(f"is:pr is:open mentions:{user}")
 
         results = self._search_entities(
             base_queries,
@@ -90,7 +138,7 @@ class GitHubClient:
         return results
 
     def get_issue(self, org: str, repo: str, number: int) -> dict[str, Any]:
-        result = self._gh_api(f"repos/{org}/{repo}/issues/{number}")
+        result = self._request("GET", f"/repos/{org}/{repo}/issues/{number}")
         return {
             "org": org,
             "repo": repo,
@@ -102,7 +150,7 @@ class GitHubClient:
         }
 
     def get_issue_detail(self, org: str, repo: str, number: int) -> dict[str, Any]:
-        result = self._gh_api(f"repos/{org}/{repo}/issues/{number}")
+        result = self._request("GET", f"/repos/{org}/{repo}/issues/{number}")
         return {
             "title": result.get("title", ""),
             "body": result.get("body", "") or "",
@@ -114,12 +162,13 @@ class GitHubClient:
 
     def active_issues(self, integration: Any, platform: Any) -> list[dict[str, Any]]:
         """Fetch all open issues currently requiring the user's attention."""
+        user = self._github_user
         base_queries = [
-            "is:issue is:open assignee:@me",
-            "is:issue is:open author:@me",
+            f"is:issue is:open assignee:{user}",
+            f"is:issue is:open author:{user}",
         ]
         if getattr(platform, "include_mentions", False):
-            base_queries.append("is:issue is:open mentions:@me")
+            base_queries.append(f"is:issue is:open mentions:{user}")
 
         results = self._search_entities(
             base_queries,
@@ -160,8 +209,9 @@ class GitHubClient:
         item_filter: Callable[[dict[str, Any]], bool] | None = None,
     ) -> list[dict[str, Any]]:
         """Execute a GitHub search/issues query and return parsed entity dicts."""
-        result = self._gh_api(
-            "search/issues",
+        result = self._request(
+            "GET",
+            "/search/issues",
             params={"q": query, "per_page": "100"},
         )
         entities = []
@@ -187,18 +237,11 @@ class GitHubClient:
         body: str = "",
     ) -> dict[str, Any]:
         """Create an issue in a GitHub repository. Returns {number, url}."""
-        cmd = [
-            "gh",
-            "api",
-            f"repos/{org}/{repo}/issues",
-            "--method",
+        result = self._request(
             "POST",
-            "-f",
-            f"title={title}",
-            "-f",
-            f"body={body}",
-        ]
-        result = json.loads(self._run_gh(cmd, timeout=30))
+            f"/repos/{org}/{repo}/issues",
+            json={"title": title, "body": body},
+        )
         return {
             "number": result.get("number"),
             "url": result.get("html_url", ""),
@@ -213,39 +256,43 @@ class GitHubClient:
             qualifiers.append(f"repo:{repo}")
         return qualifiers or [""]
 
-    def _gh_api(
+    def _request(
         self,
-        endpoint: str,
-        method: str = "GET",
+        method: str,
+        url: str,
+        *,
         params: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
-        cmd = ["gh", "api", endpoint, "--method", method]
-        for key, value in (params or {}).items():
-            cmd.extend(["-f", f"{key}={value}"])
-        return json.loads(self._run_gh(cmd, timeout=30))  # type: ignore[no-any-return]
-
-    def _run_gh(self, cmd: list[str], *, timeout: int = 30) -> str:
-        """Run a gh CLI command with retry and exponential backoff."""
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        raw: bool = False,
+    ) -> Any:
+        """Make an HTTP request with retry and exponential backoff."""
         last_err: RuntimeError | None = None
         for attempt in range(MAX_RETRIES + 1):
-            log.info("gh api: %s", " ".join(cmd))
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-            if proc.returncode == 0:
-                return proc.stdout
+            log.info("github api: %s %s", method, url)
+            resp = self._http.request(
+                method,
+                url,
+                params=params,
+                json=json,
+                headers=headers,
+            )
+            if resp.is_success:
+                return resp.text if raw else resp.json()
             last_err = RuntimeError(
-                f"gh api failed (exit {proc.returncode}): {proc.stderr.strip()}"
+                f"GitHub API failed (HTTP {resp.status_code}): {resp.text[:500]}"
             )
             if attempt < MAX_RETRIES:
                 delay = BACKOFF_BASE * (2**attempt)
                 log.warning(
-                    "gh api failed (attempt %d/%d), retrying in %ds: %s",
+                    "GitHub API failed (attempt %d/%d), retrying in %ds: HTTP %d",
                     attempt + 1,
                     MAX_RETRIES + 1,
                     delay,
-                    proc.stderr.strip(),
+                    resp.status_code,
                 )
                 time.sleep(delay)
             else:
-                log.error("gh api failed: %s", proc.stderr.strip())
+                log.error("GitHub API failed: HTTP %d %s", resp.status_code, resp.text[:500])
         assert last_err is not None
         raise last_err

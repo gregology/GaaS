@@ -18,7 +18,12 @@ def handle(task: TaskRecord) -> None:
     platform = runtime.get_platform(integration_id, "pull_requests")
     log.info("github.pull_requests.check: starting (integration=%s)", integration_id)
 
-    client = GitHubClient()
+    client = GitHubClient(
+        app_id=integration.app_id,  # type: ignore[attr-defined]
+        installation_id=integration.installation_id,  # type: ignore[attr-defined]
+        private_key=integration.private_key,  # type: ignore[attr-defined]
+        github_user=integration.github_user,  # type: ignore[attr-defined]
+    )
     store = PullRequestStore(
         path=runtime.get_notes_dir() / "github" / "pull_requests" / integration.name
     )

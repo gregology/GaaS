@@ -26,7 +26,12 @@ def handle(task: TaskRecord) -> None:
         integration_id,
     )
 
-    client = GitHubClient()
+    client = GitHubClient(
+        app_id=integration.app_id,  # type: ignore[attr-defined]
+        installation_id=integration.installation_id,  # type: ignore[attr-defined]
+        private_key=integration.private_key,  # type: ignore[attr-defined]
+        github_user=integration.github_user,  # type: ignore[attr-defined]
+    )
     pr = client.get_pr(org, repo, number)
     detail = client.get_pr_detail(org, repo, number)
 
