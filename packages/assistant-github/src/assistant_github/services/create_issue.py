@@ -13,6 +13,31 @@ from assistant_github.client import GitHubClient
 log = logging.getLogger(__name__)
 
 
+def _get_field(entry: Any, key: str) -> str:
+    """Read *key* from a dict or object, defaulting to empty string."""
+    if isinstance(entry, dict):
+        return str(entry.get(key, ""))
+    return str(getattr(entry, key, ""))
+
+
+def build_chat_context(instances: list[Any]) -> list[dict[str, str]]:
+    """Build chat context entries from GitHub integration config instances.
+
+    Extracts repos with non-empty context descriptions and returns them
+    as generic {label, description} pairs for the chat system prompt.
+    """
+    entries: list[dict[str, str]] = []
+    for instance in instances:
+        for repo_entry in getattr(instance, "repos", None) or []:
+            if isinstance(repo_entry, str):
+                continue
+            repo = _get_field(repo_entry, "repo")
+            context = _get_field(repo_entry, "context")
+            if repo and context:
+                entries.append({"label": repo, "description": context})
+    return entries
+
+
 def handle(task: TaskRecord) -> dict[str, Any]:
     """Handle a service.github.create_issue queue task.
 

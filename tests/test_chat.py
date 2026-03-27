@@ -340,7 +340,7 @@ class TestBuildActionPrompt:
         assert "title" in result
         assert "Issue title" in result
 
-    def test_includes_repo_context_when_present(self):
+    def test_includes_chat_context_when_present(self):
         from app.chat import _build_action_prompt, ACTION_METADATA
 
         ACTION_METADATA["service.github.create_issue"] = {
@@ -352,25 +352,25 @@ class TestBuildActionPrompt:
                 },
                 "required": ["repo", "title"],
             },
-            "repo_context": [
+            "chat_context": [
                 {
-                    "repo": "myorg/backend",
-                    "context": "Python API server. Include endpoint and error details.",
+                    "label": "myorg/backend",
+                    "description": "Python API server. Include endpoint and error details.",
                 },
                 {
-                    "repo": "myorg/frontend",
-                    "context": "React SPA. Include browser and component info.",
+                    "label": "myorg/frontend",
+                    "description": "React SPA. Include browser and component info.",
                 },
             ],
         }
         result = _build_action_prompt()
-        assert "Available repositories:" in result
+        assert "Context:" in result
         assert "myorg/backend" in result
         assert "Python API server" in result
         assert "myorg/frontend" in result
         assert "React SPA" in result
 
-    def test_no_repo_context_section_when_absent(self):
+    def test_no_chat_context_section_when_absent(self):
         from app.chat import _build_action_prompt, ACTION_METADATA
 
         ACTION_METADATA["service.github.create_issue"] = {
@@ -381,7 +381,7 @@ class TestBuildActionPrompt:
             },
         }
         result = _build_action_prompt()
-        assert "Available repositories:" not in result
+        assert "Context:" not in result
 
     def test_system_prompt_includes_actions(self, svc):
         from app.chat import ACTION_METADATA

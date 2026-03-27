@@ -81,6 +81,7 @@ services:
       required: [repo, title]
     chat:
       description: "Create a GitHub issue"
+      context_builder: ".services.create_issue.build_chat_context"
       options:
         - id: approve
           label: "Post issue"

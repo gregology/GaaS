@@ -121,30 +121,27 @@ def _register_single_service(
             "input_schema": getattr(service_manifest, "input_schema", {}),
         }
 
-        # Inject repo context from integration config, if available.
-        repo_context = _collect_repo_context(instances)
-        if repo_context:
-            ACTION_METADATA[key]["repo_context"] = repo_context
+        _inject_chat_context(ACTION_METADATA[key], module_name, chat_config, instances)
 
         log.info("Registered chat action: %s", key)
 
 
-def _normalize_repo_entry(entry: str | dict[str, str]) -> dict[str, str]:
-    """Normalize a repo config entry to {"repo": ..., "context": ...}."""
-    if isinstance(entry, str):
-        return {"repo": entry, "context": ""}
-    return {"repo": entry["repo"], "context": entry.get("context", "")}
-
-
-def _collect_repo_context(instances: list[object]) -> list[dict[str, str]]:
-    """Collect repo entries with non-empty context from integration instances."""
-    context_entries = []
-    for instance in instances:
-        for entry in getattr(instance, "repos", None) or []:
-            normalized = _normalize_repo_entry(entry)
-            if normalized["context"]:
-                context_entries.append(normalized)
-    return context_entries
+def _inject_chat_context(
+    metadata: dict[str, object],
+    module_name: str,
+    chat_config: object,
+    instances: list[object],
+) -> None:
+    """Load and invoke the context_builder declared in a chat config, if any."""
+    builder_path = getattr(chat_config, "context_builder", None)
+    if not builder_path:
+        return
+    builder = _load_handler(module_name, builder_path)
+    if not builder:
+        return
+    chat_context = builder(instances)  # type: ignore[arg-type]
+    if chat_context:
+        metadata["chat_context"] = chat_context
 
 
 def register_all() -> None:
