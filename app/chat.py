@@ -295,8 +295,8 @@ class ChatService:
         action = metadata.get("action", "")
         params = metadata.get("parameters", {})
 
-        service_type = ACTION_REGISTRY.get(action)
-        if service_type is None:
+        registry_entry = ACTION_REGISTRY.get(action)
+        if registry_entry is None:
             msg = ChatMessage(
                 role="system",
                 content=f"Unknown action: {action}",
@@ -311,9 +311,12 @@ class ChatService:
             )
             return {"type": "immediate", "message": msg}
 
-        # Enqueue the service task through the normal queue
+        # Enqueue the service task through the normal queue.
+        # payload_defaults are opaque fields provided by the integration layer
+        # at registration time (e.g. "integration" ID).
         payload: dict[str, Any] = {
-            "type": service_type,
+            **registry_entry.get("payload_defaults", {}),
+            "type": registry_entry["task_type"],
             "inputs": params,
             "on_result": [
                 {"type": "chat_reply", "conversation_id": conversation_id},
@@ -437,9 +440,13 @@ def _build_action_prompt() -> str:
 # Action registry — populated at startup by integration registration
 # ---------------------------------------------------------------------------
 
-# Maps action name -> service task type (e.g., "service.github.create_issue").
+# Maps action name -> {"task_type": str, "payload_defaults": dict}.
+# ``task_type`` is the queue task type (e.g. "service.github.create_issue").
+# ``payload_defaults`` carries opaque fields that the integration layer needs
+# in the task payload (e.g. ``{"integration": "github.my_repos"}``).  The chat
+# layer merges them into the payload without interpreting them.
 # Populated by _register_single_service when a service has a chat config.
-ACTION_REGISTRY: dict[str, str] = {}
+ACTION_REGISTRY: dict[str, dict[str, Any]] = {}
 
 # Maps action name -> list of response options for the confirmation UI.
 # The system attaches these to proposals; the LLM never chooses them.

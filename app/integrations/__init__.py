@@ -95,8 +95,24 @@ def _register_single_service(
     chat_config = getattr(service_manifest, "chat", None)
     if chat_config is not None:
         from app.chat import ACTION_METADATA, ACTION_OPTIONS, ACTION_REGISTRY
+        from app.config import config
 
-        ACTION_REGISTRY[key] = key  # value is the service task type
+        # Build opaque payload defaults the handler needs (e.g. integration ID).
+        payload_defaults: dict[str, str] = {}
+        instances = config.get_integrations_by_type(domain)
+        if len(instances) == 1:
+            payload_defaults["integration"] = instances[0].id
+        elif instances:
+            log.warning(
+                "Chat action %s: multiple %s instances configured; "
+                "integration must be resolved at invocation time",
+                key, domain,
+            )
+
+        ACTION_REGISTRY[key] = {
+            "task_type": key,
+            "payload_defaults": payload_defaults,
+        }
         if chat_config.options:
             ACTION_OPTIONS[key] = chat_config.options
         ACTION_METADATA[key] = {
